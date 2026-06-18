@@ -5,8 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Curran Dwyer',
-  description:
-    'Learning what it means to live a beautiful life that honors the time we have in this world.',
+  description: 'Design engineer based in America and Germany',
 };
 
 export default function RootLayout({
