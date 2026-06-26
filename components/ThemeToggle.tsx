@@ -19,8 +19,8 @@ export default function ThemeToggle() {
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       className={cn(
         'fixed right-5 top-5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full',
-        'text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'text-sand-11 transition-colors hover:bg-sand-3 hover:text-sand-12',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-8',
       )}
     >
       {/* Render a neutral placeholder until mounted to avoid a hydration mismatch. */}

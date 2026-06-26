@@ -5,12 +5,12 @@ export default function Home() {
     <>
       <ThemeToggle />
       <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-6 py-24">
-        <p className="font-serif text-2xl font-light leading-snug text-foreground sm:text-[2rem] sm:leading-snug">
+        <p className="font-serif text-2xl font-light leading-snug text-sand-12 sm:text-[2rem] sm:leading-snug">
           Researching how to live a beautiful life that honors
           the time we have in this world.
         </p>
 
-        <div className="mt-10 space-y-6 text-base leading-relaxed text-muted-foreground sm:text-lg">
+        <div className="mt-10 space-y-6 text-base leading-relaxed text-sand-11 sm:text-lg">
           <p>
             I&rsquo;m building Enai, a calm computer that organizes itself for you. 
           </p>
