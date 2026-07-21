@@ -1,8 +1,11 @@
 import { cn } from '@/lib/cn';
 import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
+import type { TileBlocks } from './HomeExperience';
+import Tile from './Tile';
 
 interface StaticHomeProps {
   active: boolean;
+  blocks: TileBlocks;
   onSelect: (id: SectionId) => void;
 }
 
@@ -10,7 +13,11 @@ interface StaticHomeProps {
  * In-flow layout for phones and prefers-reduced-motion: same content and
  * states as the choreographed scene, native scrolling, no parallax.
  */
-export default function StaticHome({ active, onSelect }: StaticHomeProps) {
+export default function StaticHome({
+  active,
+  blocks,
+  onSelect,
+}: StaticHomeProps) {
   return (
     <main
       className="min-h-dvh pb-16 pt-20"
@@ -81,8 +88,8 @@ export default function StaticHome({ active, onSelect }: StaticHomeProps) {
             className="grid gap-5"
             style={{ gridTemplateColumns: 'repeat(var(--cols), minmax(0, 1fr))' }}
           >
-            {sections.inspiration.tiles.map((tile) => (
-              <div key={tile.id} className="aspect-square rounded-[2px] bg-tile" />
+            {sections.inspiration.tiles.map((tile, i) => (
+              <Tile key={tile.id} block={blocks?.[i] ?? null} />
             ))}
           </div>
         </div>

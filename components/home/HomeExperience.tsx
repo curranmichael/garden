@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { InspirationBlock } from '@/lib/arena';
 import { sections, type SectionId } from '@/lib/home/sections';
 import { useScrollChoreography } from '@/lib/home/useScrollChoreography';
 import Bio from './Bio';
@@ -9,17 +10,44 @@ import Panel from './Panel';
 import StaticHome from './StaticHome';
 
 export type PanelState = 'idle' | 'preview' | 'active';
+export type TileBlocks = (InspirationBlock | null)[] | null;
+
+/** Fisher-Yates sample of `count` blocks, padded with nulls to `count`. */
+function sampleBlocks(
+  pool: InspirationBlock[],
+  count: number,
+): (InspirationBlock | null)[] {
+  const copy = [...pool];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  const out: (InspirationBlock | null)[] = copy.slice(0, count);
+  while (out.length < count) out.push(null);
+  return out;
+}
 
 /**
  * Orchestrates the landing → hover ghost → active panel → scroll dock
  * interaction from the Garden Figma. Scroll positions never touch React
  * state; useScrollChoreography writes CSS variables the layers consume.
  */
-export default function HomeExperience() {
+export default function HomeExperience({
+  pool,
+}: {
+  pool: InspirationBlock[];
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<SectionId | null>(null);
   const [active, setActive] = useState(false);
+  // Sampled after mount so SSR and hydration both render the placeholder
+  // grid — a fresh random draw on every visit, no mismatch.
+  const [blocks, setBlocks] = useState<TileBlocks>(null);
+
+  useEffect(() => {
+    setBlocks(sampleBlocks(pool, sections.inspiration.tiles.length));
+  }, [pool]);
 
   const panelState: PanelState = active
     ? 'active'
@@ -69,6 +97,7 @@ export default function HomeExperience() {
             tabTarget={tabTarget}
             hovered={hovered}
             active={active}
+            blocks={blocks}
             rootRef={rootRef}
             gridRef={gridRef}
             onHover={setHovered}
@@ -78,7 +107,7 @@ export default function HomeExperience() {
         </div>
       </div>
       <div className="layout-static">
-        <StaticHome active={active} onSelect={select} />
+        <StaticHome active={active} blocks={blocks} onSelect={select} />
       </div>
     </div>
   );

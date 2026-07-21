@@ -2,7 +2,7 @@ import type { RefObject } from 'react';
 import { cn } from '@/lib/cn';
 import { TAB_HEIGHT } from '@/lib/home/geometry';
 import { sections, type SectionId } from '@/lib/home/sections';
-import type { PanelState } from './HomeExperience';
+import type { PanelState, TileBlocks } from './HomeExperience';
 import NavBar from './NavBar';
 import TileGrid from './TileGrid';
 
@@ -11,6 +11,7 @@ interface PanelProps {
   tabTarget: SectionId;
   hovered: SectionId | null;
   active: boolean;
+  blocks: TileBlocks;
   rootRef: RefObject<HTMLDivElement | null>;
   gridRef: RefObject<HTMLDivElement | null>;
   onHover: (id: SectionId | null) => void;
@@ -27,6 +28,7 @@ export default function Panel({
   tabTarget,
   hovered,
   active,
+  blocks,
   rootRef,
   gridRef,
   onHover,
@@ -107,7 +109,12 @@ export default function Panel({
         )}
         style={bodyBox}
       >
-        <TileGrid tiles={sections[tabTarget].tiles} state={state} gridRef={gridRef} />
+        <TileGrid
+          tiles={sections[tabTarget].tiles}
+          blocks={tabTarget === 'inspiration' ? blocks : null}
+          state={state}
+          gridRef={gridRef}
+        />
       </div>
     </div>
   );
