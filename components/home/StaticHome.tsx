@@ -37,7 +37,7 @@ export default function StaticHome({ active, onSelect }: StaticHomeProps) {
               alt=""
               width={45}
               height={7}
-              className="pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
+              className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
             />
           </a>
           , a computer that organizes itself for you. I&rsquo;m interested in
@@ -69,7 +69,7 @@ export default function StaticHome({ active, onSelect }: StaticHomeProps) {
                 alt=""
                 width={section.underline.width}
                 height={section.underline.height}
-                className="pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
+                className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
               />
             </button>
           );

@@ -26,7 +26,7 @@ export default function Bio() {
             alt=""
             width={45}
             height={7}
-            className="pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
+            className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
           />
         </a>
         , a computer that organizes itself for you.

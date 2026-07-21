@@ -30,6 +30,10 @@
   --tab-x: var(--gutter);
   --tab-w: 135px;
 
+  /* Softening on the hand-drawn underline strokes; blur() takes a Gaussian
+     stdDeviation, so this is half the equivalent Figma blur value. */
+  --underline-blur: 0.5px;
+
   --cols: 2;
 }
 
@@ -73,5 +77,9 @@
     .layout-static {
       display: block;
     }
+  }
+
+  .underline-stroke {
+    filter: blur(var(--underline-blur));
   }
 }

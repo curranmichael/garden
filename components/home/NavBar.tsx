@@ -110,7 +110,7 @@ export default function NavBar({
               width={section.underline.width}
               height={section.underline.height}
               className={cn(
-                'pointer-events-none absolute -left-[3px] top-[23px] max-w-none transition-opacity duration-200',
+                'underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none transition-opacity duration-200',
                 onSolidTab ? 'opacity-0' : 'opacity-100',
               )}
             />
