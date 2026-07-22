@@ -51,8 +51,10 @@ export default function Tile({ block }: TileProps) {
       <div
         className={cn(
           'pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-page/80 via-page/40 to-transparent px-2 pb-1.5 pt-6',
-          'transition-opacity duration-200 opacity-100',
-          '[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100',
+          'transition-opacity duration-200 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+          // No hover, no channel name: display:none keeps the invisible
+          // link from intercepting taps meant for the image.
+          '[@media(hover:none)]:hidden',
         )}
       >
         <a
