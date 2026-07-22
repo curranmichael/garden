@@ -1,30 +1,90 @@
 @import "tailwindcss";
-@import "@radix-ui/colors/sand.css";
-@import "@radix-ui/colors/sand-dark.css";
-
-@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Radix Sand scale, exposed under its native names: bg-sand-1, text-sand-12, ... */
-  --color-sand-1: var(--sand-1);
-  --color-sand-2: var(--sand-2);
-  --color-sand-3: var(--sand-3);
-  --color-sand-4: var(--sand-4);
-  --color-sand-5: var(--sand-5);
-  --color-sand-6: var(--sand-6);
-  --color-sand-7: var(--sand-7);
-  --color-sand-8: var(--sand-8);
-  --color-sand-9: var(--sand-9);
-  --color-sand-10: var(--sand-10);
-  --color-sand-11: var(--sand-11);
-  --color-sand-12: var(--sand-12);
+  /* Single fixed scheme from the Garden Figma: dark page, light panel */
+  --color-page: #161615;
+  --color-ink: #ededec;
+  --color-muted: #a1a09a;
+  --color-panel: #ededec;
+  --color-panel-ink: #161615;
+  --color-tile: #d9d9d9;
 
   --font-sans: var(--font-soehne);
   --font-serif: var(--font-signifier);
 }
 
+:root {
+  /* Horizontal rhythm: panel gutter + 20px content inset (88/108 at 1280) */
+  --gutter: clamp(24px, 6.875vw, 88px);
+  --inset: 20px;
+
+  /* Scroll choreography, driven per-frame by useScrollChoreography.
+     Defaults are the landing state so SSR and first paint agree. */
+  --panel-rest: clamp(320px, 50dvh, 520px);
+  --panel-top: var(--panel-rest);
+  --name-y: 150px;
+  --grid-y: 0px;
+  --scroll-range: 0px;
+
+  /* Folder tab, positioned by NavBar measurements (label + 20px each side) */
+  --tab-x: var(--gutter);
+  --tab-w: 135px;
+
+  /* Softening on the hand-drawn underline strokes; blur() takes a Gaussian
+     stdDeviation, so this is half the equivalent Figma blur value. */
+  --underline-blur: 0.5px;
+
+  --cols: 2;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --cols: 3;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --cols: 5;
+  }
+}
+
 @layer base {
+  /* Suppress rubber-banding only for the choreographed scene; the static
+     layout keeps native scrolling, including pull-to-refresh. Complement
+     of the .layout-static condition below. */
+  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    html,
+    body {
+      overscroll-behavior-y: none;
+    }
+  }
+
   body {
-    @apply bg-sand-1 text-sand-12 font-sans antialiased;
+    @apply bg-page text-ink font-serif font-light antialiased;
+  }
+}
+
+@layer components {
+  /* The choreographed fixed-layer scene needs hover + room; phones and
+     reduced-motion get the static in-flow layout instead. */
+  .layout-choreo {
+    display: block;
+  }
+  .layout-static {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce), (max-width: 767px) {
+    .layout-choreo {
+      display: none;
+    }
+    .layout-static {
+      display: block;
+    }
+  }
+
+  .underline-stroke {
+    filter: blur(var(--underline-blur));
   }
 }
