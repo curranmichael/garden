@@ -119,6 +119,15 @@ export default function Panel({
           gridRef={gridRef}
         />
       </div>
+      {/* During a preview, entering the body counts as the click. Unmounts
+          outside preview so it never blocks tile links. */}
+      {state === 'preview' && sections[tabTarget].activatable && (
+        <div
+          className="pointer-events-auto absolute z-10"
+          style={bodyBox}
+          onPointerEnter={() => onSelect(tabTarget)}
+        />
+      )}
     </div>
   );
 }

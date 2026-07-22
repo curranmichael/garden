@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { cn } from '@/lib/cn';
-import { NAV_GAP, NAV_IN_TAB, TAB_PAD } from '@/lib/home/geometry';
+import { NAV_GAP, NAV_IN_TAB, TAB_HEIGHT, TAB_PAD } from '@/lib/home/geometry';
 import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
 import type { PanelState } from './HomeExperience';
 
@@ -104,6 +104,15 @@ export default function NavBar({
             onBlur={() => onHover(null)}
             onClick={() => onSelect(id)}
           >
+            {/* Extends the hitbox over the full folder-tab strip so the
+                pointer can travel from label to panel body without dropping
+                the preview. Buttons vertically center extra height, so the
+                button itself must stay content-sized. */}
+            <span
+              aria-hidden
+              className="absolute inset-x-0"
+              style={{ top: -NAV_IN_TAB, height: TAB_HEIGHT }}
+            />
             <span
               ref={(el) => {
                 if (el) labelRefs.current.set(id, el);

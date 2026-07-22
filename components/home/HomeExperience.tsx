@@ -69,6 +69,21 @@ export default function HomeExperience() {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, deactivate]);
 
+  // Hover-above-to-close only applies while the panel rests at the top;
+  // the boundary check flips state at most once per crossing, so scrolling
+  // still never causes per-frame React renders.
+  const [atTop, setAtTop] = useState(true);
+  useEffect(() => {
+    if (!active) {
+      setAtTop(true);
+      return;
+    }
+    const onScroll = () => setAtTop(window.scrollY < 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [active]);
+
   return (
     <div ref={rootRef}>
       <div className="layout-choreo">
@@ -80,6 +95,15 @@ export default function HomeExperience() {
         />
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
           <Bio />
+          {/* Hovering above the resting panel closes it; 8px of hysteresis
+              keeps grazing the tab's top edge from slamming it shut. */}
+          {active && atTop && (
+            <div
+              className="pointer-events-auto absolute inset-x-0 top-0 z-[15]"
+              style={{ height: 'calc(var(--panel-top) - 8px)' }}
+              onPointerEnter={deactivate}
+            />
+          )}
           <Panel
             state={panelState}
             tabTarget={tabTarget}
