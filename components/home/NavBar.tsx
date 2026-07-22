@@ -31,14 +31,22 @@ export default function NavBar({
   const rowRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<SectionId, HTMLSpanElement>());
   const boxes = useRef(new Map<SectionId, { x: number; w: number }>());
+  // Read through a ref so applyTab/measure stay stable and the listeners
+  // below register once instead of re-subscribing on every hover change.
+  const targetRef = useRef(tabTarget);
 
   const applyTab = useCallback(() => {
     const root = rootRef.current;
-    const box = boxes.current.get(tabTarget);
+    const box = boxes.current.get(targetRef.current);
     if (!root || !box) return;
     root.style.setProperty('--tab-x', `${box.x - TAB_PAD}px`);
     root.style.setProperty('--tab-w', `${box.w + TAB_PAD * 2}px`);
-  }, [rootRef, tabTarget]);
+  }, [rootRef]);
+
+  useEffect(() => {
+    targetRef.current = tabTarget;
+    applyTab();
+  }, [tabTarget, applyTab]);
 
   const measure = useCallback(() => {
     for (const [id, el] of labelRefs.current) {

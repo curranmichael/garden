@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { InspirationBlock } from '@/lib/arena';
 import { sections, type SectionId } from '@/lib/home/sections';
 import { useScrollChoreography } from '@/lib/home/useScrollChoreography';
+import { shuffle } from '@/lib/shuffle';
 import Bio from './Bio';
 import NameLine from './NameLine';
 import Panel from './Panel';
@@ -12,17 +13,12 @@ import StaticHome from './StaticHome';
 export type PanelState = 'idle' | 'preview' | 'active';
 export type TileBlocks = (InspirationBlock | null)[] | null;
 
-/** Fisher-Yates sample of `count` blocks, padded with nulls to `count`. */
+/** Random sample of `count` blocks, padded with nulls to `count`. */
 function sampleBlocks(
   pool: InspirationBlock[],
   count: number,
 ): (InspirationBlock | null)[] {
-  const copy = [...pool];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  const out: (InspirationBlock | null)[] = copy.slice(0, count);
+  const out: (InspirationBlock | null)[] = shuffle([...pool]).slice(0, count);
   while (out.length < count) out.push(null);
   return out;
 }

@@ -50,9 +50,14 @@
 }
 
 @layer base {
-  html,
-  body {
-    overscroll-behavior-y: none;
+  /* Suppress rubber-banding only for the choreographed scene; the static
+     layout keeps native scrolling, including pull-to-refresh. Complement
+     of the .layout-static condition below. */
+  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    html,
+    body {
+      overscroll-behavior-y: none;
+    }
   }
 
   body {

@@ -102,7 +102,10 @@ export default function Panel({
         onHover={onHover}
         onSelect={onSelect}
       />
+      {/* inert: the idle/ghost grid is purely visual — opacity alone would
+          leave its links in the tab order and accessibility tree. */}
       <div
+        inert={!active}
         className={cn(
           'absolute overflow-hidden rounded-[4px]',
           active && 'pointer-events-auto',

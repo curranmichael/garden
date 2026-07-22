@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { shuffle } from '@/lib/shuffle';
+
 /**
  * Are.na v3 data layer for the Inspiration tiles.
  * Reads the user's public + closed channels and pools their image-bearing
@@ -11,7 +13,9 @@ const ARENA_API = 'https://api.are.na/v3';
 const ARENA_USER = 'curran-dwyer';
 const PER = 100;
 const MAX_CHANNEL_PAGES = 3;
-const POOL_CAP = 200;
+// The whole pool ships in the page payload so the client can sample per
+// visit; 3× the 20-tile grid keeps variety without bloating the HTML.
+const POOL_CAP = 60;
 const CONCURRENCY = 5;
 
 export interface InspirationBlock {
@@ -98,14 +102,6 @@ function toBlock(
     channelTitle: channel.title,
     channelUrl: `https://www.are.na/${channel.owner?.slug ?? ARENA_USER}/${channel.slug}`,
   };
-}
-
-function shuffle<T>(items: T[]): T[] {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
 }
 
 export async function getInspirationPool(): Promise<InspirationBlock[]> {
