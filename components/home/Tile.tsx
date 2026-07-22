@@ -15,20 +15,29 @@ interface TileProps {
  */
 export default function Tile({ block }: TileProps) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   if (!block || failed) {
     return <div className="aspect-square rounded-[2px] bg-tile" />;
   }
 
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-[2px] bg-tile">
+    <div
+      className={cn(
+        'group relative aspect-square overflow-hidden rounded-[2px] transition-colors duration-200',
+        // Grey only until the image lands; after that the image floats on
+        // the panel at its natural proportions.
+        !loaded && 'bg-tile',
+      )}
+    >
       <img
         src={block.imgUrl}
         alt={block.alt}
         loading="lazy"
         decoding="async"
+        onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}
-        className="pointer-events-none absolute inset-0 size-full object-cover"
+        className="pointer-events-none absolute inset-0 size-full object-contain"
       />
       <a
         href={block.blockUrl}
