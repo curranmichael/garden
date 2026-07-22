@@ -1,21 +1,20 @@
 import 'server-only';
 
-import { shuffle } from '@/lib/shuffle';
-
 /**
  * Are.na v3 data layer for the Inspiration tiles.
- * Reads the user's public + closed channels and pools their image-bearing
+ * Reads the user's public + closed channels and collects their image-bearing
  * blocks. Private channels are always excluded. Every failure path degrades
- * to a smaller (possibly empty) pool — this module never throws.
+ * to a smaller (possibly empty) result — this module never throws.
+ *
+ * The underlying fetches are cached for an hour, so callers can assemble the
+ * full collection per request without touching Are.na's API each time.
  */
 
 const ARENA_API = 'https://api.are.na/v3';
 const ARENA_USER = 'curran-dwyer';
 const PER = 100;
 const MAX_CHANNEL_PAGES = 3;
-// The whole pool ships in the page payload so the client can sample per
-// visit; 3× the 20-tile grid keeps variety without bloating the HTML.
-const POOL_CAP = 60;
+const MAX_CONTENT_PAGES = 2;
 const CONCURRENCY = 5;
 
 export interface InspirationBlock {
@@ -104,7 +103,21 @@ function toBlock(
   };
 }
 
-export async function getInspirationPool(): Promise<InspirationBlock[]> {
+async function fetchChannelItems(channelId: number): Promise<ArenaItem[]> {
+  const items: ArenaItem[] = [];
+  for (let page = 1; page <= MAX_CONTENT_PAGES; page++) {
+    const res = await arenaFetch<ArenaPage<ArenaItem>>(
+      `/channels/${channelId}/contents?per=${PER}&page=${page}`,
+    );
+    if (!res?.data) break;
+    items.push(...res.data);
+    if (!res.meta?.has_more_pages) break;
+  }
+  return items;
+}
+
+/** Every image-bearing block across the user's public + closed channels. */
+export async function getInspirationBlocks(): Promise<InspirationBlock[]> {
   try {
     const channels = await fetchVisibleChannels();
     const byId = new Map<number, InspirationBlock>();
@@ -113,12 +126,7 @@ export async function getInspirationPool(): Promise<InspirationBlock[]> {
       const results = await Promise.all(
         batch.map(async (channel) => ({
           channel,
-          items:
-            (
-              await arenaFetch<ArenaPage<ArenaItem>>(
-                `/channels/${channel.id}/contents?per=${PER}`,
-              )
-            )?.data ?? [],
+          items: await fetchChannelItems(channel.id),
         })),
       );
       for (const { channel, items } of results) {
@@ -128,7 +136,7 @@ export async function getInspirationPool(): Promise<InspirationBlock[]> {
         }
       }
     }
-    return shuffle([...byId.values()]).slice(0, POOL_CAP);
+    return [...byId.values()];
   } catch {
     return [];
   }

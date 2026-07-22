@@ -88,9 +88,11 @@ export default function StaticHome({
             className="grid gap-5"
             style={{ gridTemplateColumns: 'repeat(var(--cols), minmax(0, 1fr))' }}
           >
-            {sections.inspiration.tiles.map((tile, i) => (
-              <Tile key={tile.id} block={blocks?.[i] ?? null} />
-            ))}
+            {blocks?.length
+              ? blocks.map((block) => <Tile key={block.id} block={block} />)
+              : sections.inspiration.tiles.map((tile) => (
+                  <Tile key={tile.id} block={null} />
+                ))}
           </div>
         </div>
       )}

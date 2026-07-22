@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import type { InspirationBlock } from '@/lib/arena';
 import { cn } from '@/lib/cn';
 import { GRID_HEAD, TAB_HEIGHT } from '@/lib/home/geometry';
 import type { Tile as TileSlot } from '@/lib/home/sections';
@@ -36,8 +37,11 @@ export default function TileGrid({
         transform: 'translateY(var(--grid-y))',
       }}
     >
-      {tiles.map((tile, i) => (
-        <Tile key={tile.id} block={blocks?.[i] ?? null} />
+      {(blocks?.length
+        ? blocks
+        : (tiles.map(() => null) as (InspirationBlock | null)[])
+      ).map((block, i) => (
+        <Tile key={block?.id ?? tiles[i]?.id ?? i} block={block} />
       ))}
     </div>
   );

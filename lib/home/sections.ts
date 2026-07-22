@@ -18,6 +18,9 @@ export interface Section {
 const placeholderTiles = (section: string, count: number): Tile[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${section}-${i + 1}` }));
 
+/** How many Are.na blocks each visit draws into the Inspiration grid. */
+export const INSPIRATION_DRAW = 90;
+
 export const SECTION_ORDER: SectionId[] = [
   'inspiration',
   'diary',

@@ -4,46 +4,38 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { InspirationBlock } from '@/lib/arena';
 import { sections, type SectionId } from '@/lib/home/sections';
 import { useScrollChoreography } from '@/lib/home/useScrollChoreography';
-import { shuffle } from '@/lib/shuffle';
 import Bio from './Bio';
 import NameLine from './NameLine';
 import Panel from './Panel';
 import StaticHome from './StaticHome';
 
 export type PanelState = 'idle' | 'preview' | 'active';
-export type TileBlocks = (InspirationBlock | null)[] | null;
-
-/** Random sample of `count` blocks, padded with nulls to `count`. */
-function sampleBlocks(
-  pool: InspirationBlock[],
-  count: number,
-): (InspirationBlock | null)[] {
-  const out: (InspirationBlock | null)[] = shuffle([...pool]).slice(0, count);
-  while (out.length < count) out.push(null);
-  return out;
-}
+export type TileBlocks = InspirationBlock[] | null;
 
 /**
  * Orchestrates the landing → hover ghost → active panel → scroll dock
  * interaction from the Garden Figma. Scroll positions never touch React
  * state; useScrollChoreography writes CSS variables the layers consume.
  */
-export default function HomeExperience({
-  pool,
-}: {
-  pool: InspirationBlock[];
-}) {
+export default function HomeExperience() {
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<SectionId | null>(null);
   const [active, setActive] = useState(false);
-  // Sampled after mount so SSR and hydration both render the placeholder
-  // grid — a fresh random draw on every visit, no mismatch.
+  // Fetched after mount: the server draws a fresh random set per request,
+  // and the placeholder grid renders until it arrives — no hydration risk.
   const [blocks, setBlocks] = useState<TileBlocks>(null);
 
   useEffect(() => {
-    setBlocks(sampleBlocks(pool, sections.inspiration.tiles.length));
-  }, [pool]);
+    const controller = new AbortController();
+    fetch('/api/inspiration', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((draw: InspirationBlock[] | null) => {
+        if (draw?.length) setBlocks(draw);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   const panelState: PanelState = active
     ? 'active'
