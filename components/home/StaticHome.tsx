@@ -27,7 +27,7 @@ export default function StaticHome({
       }}
     >
       <p className="text-xl leading-[26px]">
-        Curran Dwyer, <em>a software designer and founder</em>
+        Curran Dwyer, <em className="block">a software designer and founder</em>
       </p>
       <div className="mt-[13px] max-w-[746px] text-xl leading-[26px] text-muted">
         <p>
@@ -53,34 +53,38 @@ export default function StaticHome({
           deeper attention?
         </p>
       </div>
-      <nav className="mt-20 flex flex-wrap gap-x-[50px] gap-y-5">
-        {SECTION_ORDER.map((id) => {
-          const section = sections[id];
-          const current = active && id === 'inspiration';
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-disabled={!section.activatable || undefined}
-              className={cn(
-                'relative block text-xl leading-[26px] transition-colors duration-200',
-                'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-muted/70',
-                current ? 'text-ink' : 'text-muted',
-                section.activatable ? 'cursor-pointer' : 'cursor-default',
-              )}
-              onClick={() => onSelect(id)}
-            >
-              {section.label}
-              <img
-                src={section.underline.src}
-                alt=""
-                width={section.underline.width}
-                height={section.underline.height}
-                className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
-              />
-            </button>
-          );
-        })}
+      <nav className="mt-20 flex flex-col items-center gap-y-5">
+        {[SECTION_ORDER.slice(0, 2), SECTION_ORDER.slice(2)].map((row) => (
+          <div key={row.join('-')} className="flex gap-x-[50px]">
+            {row.map((id) => {
+              const section = sections[id];
+              const current = active && id === 'inspiration';
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  aria-disabled={!section.activatable || undefined}
+                  className={cn(
+                    'relative block text-xl leading-[26px] transition-colors duration-200',
+                    'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-muted/70',
+                    current ? 'text-ink' : 'text-muted',
+                    section.activatable ? 'cursor-pointer' : 'cursor-default',
+                  )}
+                  onClick={() => onSelect(id)}
+                >
+                  {section.label}
+                  <img
+                    src={section.underline.src}
+                    alt=""
+                    width={section.underline.width}
+                    height={section.underline.height}
+                    className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
       {active && (
         <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
