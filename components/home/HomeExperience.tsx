@@ -20,6 +20,7 @@ export type TileBlocks = InspirationBlock[] | null;
 export default function HomeExperience() {
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const bioRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<SectionId | null>(null);
   const [active, setActive] = useState(false);
   // Fetched after mount: the server draws a fresh random set per request,
@@ -44,7 +45,7 @@ export default function HomeExperience() {
       : 'idle';
   const tabTarget: SectionId = active ? 'inspiration' : (hovered ?? 'inspiration');
 
-  useScrollChoreography({ rootRef, gridRef, active });
+  useScrollChoreography({ rootRef, gridRef, bioRef, active });
 
   const deactivate = useCallback(() => {
     window.scrollTo(0, 0);
@@ -94,7 +95,7 @@ export default function HomeExperience() {
           }}
         />
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <Bio />
+          <Bio ref={bioRef} />
           {/* Hovering above the resting panel closes it; 8px of hysteresis
               keeps grazing the tab's top edge from slamming it shut. */}
           {active && atTop && (

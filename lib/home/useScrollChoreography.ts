@@ -1,9 +1,11 @@
 import { useEffect, type RefObject } from 'react';
 import {
   DOCK_TOP,
+  NAME_TO_BIO,
   TAB_HEIGHT,
   dockScroll,
   gridY,
+  nameRest,
   nameY,
   panelRest,
   panelTop,
@@ -14,6 +16,8 @@ interface Options {
   rootRef: RefObject<HTMLElement | null>;
   /** Tile grid element, measured to size the post-dock scroll range. */
   gridRef: RefObject<HTMLElement | null>;
+  /** Bio block, measured to center the header above the resting panel. */
+  bioRef: RefObject<HTMLElement | null>;
   /** Choreography only responds to scroll while a section is active. */
   active: boolean;
 }
@@ -27,7 +31,12 @@ const CHOREO_MEDIA =
  * rAF-coalesced passive scroll listener. React never re-renders per frame;
  * layers consume the variables with transform-only styles.
  */
-export function useScrollChoreography({ rootRef, gridRef, active }: Options) {
+export function useScrollChoreography({
+  rootRef,
+  gridRef,
+  bioRef,
+  active,
+}: Options) {
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -37,6 +46,7 @@ export function useScrollChoreography({ rootRef, gridRef, active }: Options) {
       history.scrollRestoration = 'manual';
 
       let rest = panelRest(window.innerHeight);
+      let nameRestY = 0;
       let maxGrid = 0;
       let raf = 0;
 
@@ -44,16 +54,19 @@ export function useScrollChoreography({ rootRef, gridRef, active }: Options) {
         const scroll = active ? window.scrollY : 0;
         const panel = panelTop(scroll, rest);
         root.style.setProperty('--panel-top', `${panel}px`);
-        root.style.setProperty('--name-y', `${nameY(panel)}px`);
+        root.style.setProperty('--name-y', `${nameY(panel, nameRestY)}px`);
         root.style.setProperty('--grid-y', `${-gridY(scroll, rest, maxGrid)}px`);
       };
 
       const measure = () => {
         const vh = window.innerHeight;
         rest = panelRest(vh);
+        const bioHeight = bioRef.current?.offsetHeight ?? 78;
+        nameRestY = nameRest(rest, NAME_TO_BIO + bioHeight);
         const gridHeight = gridRef.current?.offsetHeight ?? 0;
         maxGrid = Math.max(0, gridHeight - (vh - DOCK_TOP - TAB_HEIGHT));
         root.style.setProperty('--panel-rest', `${rest}px`);
+        root.style.setProperty('--bio-top', `${nameRestY + NAME_TO_BIO}px`);
         root.style.setProperty('--scroll-range', `${dockScroll(rest) + maxGrid}px`);
         apply();
       };
@@ -67,6 +80,8 @@ export function useScrollChoreography({ rootRef, gridRef, active }: Options) {
       };
 
       measure();
+      // Signifier loads with display: swap; the bio can rewrap when it lands.
+      document.fonts.ready.then(() => measure());
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', measure);
       return () => {
@@ -95,5 +110,5 @@ export function useScrollChoreography({ rootRef, gridRef, active }: Options) {
       mql.removeEventListener('change', sync);
       stop?.();
     };
-  }, [rootRef, gridRef, active]);
+  }, [rootRef, gridRef, bioRef, active]);
 }

@@ -1,12 +1,17 @@
-import { BIO_TOP } from '@/lib/home/geometry';
+import type { RefObject } from 'react';
 
 /** Bio block; stays put while the rising panel covers it. */
-export default function Bio() {
+export default function Bio({
+  ref,
+}: {
+  ref: RefObject<HTMLDivElement | null>;
+}) {
   return (
     <div
+      ref={ref}
       className="absolute z-10 text-xl leading-[26px] text-muted"
       style={{
-        top: BIO_TOP,
+        top: 'var(--bio-top)',
         left: 'calc(var(--gutter) + var(--inset))',
         right: 'calc(var(--gutter) + var(--inset))',
         maxWidth: 746,

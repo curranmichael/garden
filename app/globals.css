@@ -19,10 +19,13 @@
   --inset: 20px;
 
   /* Scroll choreography, driven per-frame by useScrollChoreography.
-     Defaults are the landing state so SSR and first paint agree. */
-  --panel-rest: clamp(320px, 50dvh, 520px);
+     Defaults are the landing state so SSR and first paint agree: nav text
+     centered on the viewport midline, header equidistant from the top and
+     the nav (values assume the 3-line bio; the hook re-measures on mount). */
+  --panel-rest: calc(50dvh - 26px);
   --panel-top: var(--panel-rest);
-  --name-y: 150px;
+  --name-y: calc(25dvh - 65px);
+  --bio-top: calc(25dvh - 26px);
   --grid-y: 0px;
   --scroll-range: 0px;
 
