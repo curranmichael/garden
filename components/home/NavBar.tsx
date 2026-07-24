@@ -78,6 +78,14 @@ export default function NavBar({
         columnGap: NAV_GAP,
         paddingTop: NAV_IN_TAB,
       }}
+      // Hover clears only on leaving the whole row, never between labels:
+      // the buttons' hitboxes are contiguous, so a crossing never passes
+      // through a "nothing hovered" frame.
+      onPointerLeave={() => onHover(null)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          onHover(null);
+      }}
     >
       {SECTION_ORDER.map((id) => {
         const section = sections[id];
@@ -99,19 +107,24 @@ export default function NavBar({
               section.activatable ? 'cursor-pointer' : 'cursor-default',
             )}
             onPointerEnter={() => onHover(id)}
-            onPointerLeave={() => onHover(null)}
             onFocus={() => onHover(id)}
-            onBlur={() => onHover(null)}
             onClick={() => onSelect(id)}
           >
-            {/* Extends the hitbox over the full folder-tab strip so the
+            {/* Extends the hitbox over the full folder-tab strip (so the
                 pointer can travel from label to panel body without dropping
-                the preview. Buttons vertically center extra height, so the
-                button itself must stay content-sized. */}
+                the preview) and half the nav gap to each side (so adjacent
+                hitboxes touch and crossing between labels never leaves the
+                row). Buttons vertically center extra height, so the button
+                itself must stay content-sized. */}
             <span
               aria-hidden
-              className="absolute inset-x-0"
-              style={{ top: -NAV_IN_TAB, height: TAB_HEIGHT }}
+              className="absolute"
+              style={{
+                top: -NAV_IN_TAB,
+                height: TAB_HEIGHT,
+                left: -NAV_GAP / 2,
+                right: -NAV_GAP / 2,
+              }}
             />
             <span
               ref={(el) => {

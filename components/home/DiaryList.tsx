@@ -2,14 +2,20 @@ import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { diaryEntries, mediumLabel, type DiaryEntry } from '@/lib/diary';
 
+interface DiaryListProps {
+  /** Ghost preview rides the darkened tab surface, so text inks light;
+   *  on the solid panel (active, and the static layout) it inks dark. */
+  ghost?: boolean;
+}
+
 /**
  * The diary as a list of rows: title on the left, medium tag on the right.
  * Clicking a title unfolds the entry text in place; hovering the tag (or
  * tapping it on touch) floats a photograph/screenshot of the artifact the
- * entry was written on. Rendered on the light panel in both layouts, so
- * everything inks in panel-ink.
+ * entry was written on. Colors transition with the panel surface so the
+ * ghost → active flip has no flash.
  */
-export default function DiaryList() {
+export default function DiaryList({ ghost = false }: DiaryListProps) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
 
   return (
@@ -18,6 +24,7 @@ export default function DiaryList() {
         <EntryRow
           key={entry.slug}
           entry={entry}
+          ghost={ghost}
           open={openSlug === entry.slug}
           onToggle={() =>
             setOpenSlug((current) =>
@@ -32,11 +39,12 @@ export default function DiaryList() {
 
 interface EntryRowProps {
   entry: DiaryEntry;
+  ghost: boolean;
   open: boolean;
   onToggle: () => void;
 }
 
-function EntryRow({ entry, open, onToggle }: EntryRowProps) {
+function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
   // Hover (mouse) and pinned (tap/keyboard) both raise the popover; touch
   // browsers fire pointerenter on tap, so hover is gated to mouse pointers.
   const [hovering, setHovering] = useState(false);
@@ -44,14 +52,20 @@ function EntryRow({ entry, open, onToggle }: EntryRowProps) {
   const popoverOpen = hovering || pinned;
 
   return (
-    <li className="border-b border-panel-ink/10 last:border-b-0">
+    <li
+      className={cn(
+        'border-b transition-colors duration-200 last:border-b-0',
+        ghost ? 'border-ink/15' : 'border-panel-ink/10',
+      )}
+    >
       <div className="flex items-baseline justify-between gap-6 py-4">
         <button
           type="button"
           aria-expanded={open}
           onClick={onToggle}
           className={cn(
-            'text-left text-xl leading-[26px] text-panel-ink underline-offset-4 hover:underline',
+            'text-left text-xl leading-[26px] underline-offset-4 transition-colors duration-200 hover:underline',
+            ghost ? 'text-ink' : 'text-panel-ink',
             'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-panel-ink/70',
             open && 'underline',
           )}
@@ -76,7 +90,11 @@ function EntryRow({ entry, open, onToggle }: EntryRowProps) {
             onBlur={() => setPinned(false)}
             className={cn(
               'font-sans text-[13px] leading-[26px] tracking-wide transition-colors duration-200',
-              popoverOpen ? 'text-panel-ink' : 'text-panel-ink/50',
+              ghost
+                ? 'text-muted'
+                : popoverOpen
+                  ? 'text-panel-ink'
+                  : 'text-panel-ink/50',
               'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-panel-ink/70',
             )}
           >
@@ -86,11 +104,23 @@ function EntryRow({ entry, open, onToggle }: EntryRowProps) {
         </span>
       </div>
       {open && (
-        <div className="max-w-[620px] space-y-4 pb-6 pr-8 text-lg leading-[26px] text-panel-ink/80">
+        <div
+          className={cn(
+            'max-w-[620px] space-y-4 pb-6 pr-8 text-lg leading-[26px] transition-colors duration-200',
+            ghost ? 'text-ink/80' : 'text-panel-ink/80',
+          )}
+        >
           {entry.body.length ? (
-            renderBody(entry.body)
+            renderBody(entry.body, ghost)
           ) : (
-            <p className="italic text-panel-ink/45">Coming soon.</p>
+            <p
+              className={cn(
+                'italic',
+                ghost ? 'text-ink/45' : 'text-panel-ink/45',
+              )}
+            >
+              Coming soon.
+            </p>
           )}
         </div>
       )}
@@ -102,7 +132,7 @@ function EntryRow({ entry, open, onToggle }: EntryRowProps) {
  * Body blocks: plain lines are paragraphs, `# ` marks a section heading,
  * and runs of `- ` lines group into one bulleted list.
  */
-function renderBody(body: string[]): ReactNode[] {
+function renderBody(body: string[], ghost: boolean): ReactNode[] {
   const out: ReactNode[] = [];
   let items: string[] = [];
   const flush = (key: number) => {
@@ -124,7 +154,13 @@ function renderBody(body: string[]): ReactNode[] {
     flush(i);
     if (block.startsWith('# ')) {
       out.push(
-        <h3 key={i} className="pt-3 font-normal text-panel-ink">
+        <h3
+          key={i}
+          className={cn(
+            'pt-3 font-normal transition-colors duration-200',
+            ghost ? 'text-ink' : 'text-panel-ink',
+          )}
+        >
           {block.slice(2)}
         </h3>,
       );

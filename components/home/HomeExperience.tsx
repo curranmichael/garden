@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { InspirationBlock } from '@/lib/arena';
+import { dockScroll, panelRest } from '@/lib/home/geometry';
 import { sections, type SectionId } from '@/lib/home/sections';
 import { useScrollChoreography } from '@/lib/home/useScrollChoreography';
 import Bio from './Bio';
@@ -43,7 +44,11 @@ export default function HomeExperience() {
     : hovered
       ? 'preview'
       : 'idle';
-  const tabTarget: SectionId = active ?? hovered ?? 'inspiration';
+  // With nothing hovered or active, the tab geometry holds its last target
+  // so the ghost fades out in place instead of sliding back to a default.
+  const lastTarget = useRef<SectionId>('inspiration');
+  const tabTarget: SectionId = active ?? hovered ?? lastTarget.current;
+  if (tabTarget !== lastTarget.current) lastTarget.current = tabTarget;
 
   useScrollChoreography({ rootRef, gridRef, bioRef, active });
 
@@ -54,11 +59,22 @@ export default function HomeExperience() {
 
   // Clicking the open section's tab closes it; clicking another activatable
   // tab swaps the panel's content in place (the panel itself doesn't move).
+  // On a swap, any scroll past the dock point is inside the old content, so
+  // clamp back to it — the new section always starts at its top.
   const select = useCallback(
     (id: SectionId) => {
       if (!sections[id].activatable) return;
-      if (active === id) deactivate();
-      else setActive(id);
+      if (active === id) {
+        deactivate();
+      } else {
+        if (active) {
+          window.scrollTo(
+            0,
+            Math.min(window.scrollY, dockScroll(panelRest(window.innerHeight))),
+          );
+        }
+        setActive(id);
+      }
     },
     [active, deactivate],
   );

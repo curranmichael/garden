@@ -131,7 +131,7 @@ export default function Panel({
               transform: 'translateY(var(--grid-y))',
             }}
           >
-            <DiaryList />
+            <DiaryList ghost={state !== 'active'} />
           </div>
         ) : (
           <TileGrid
