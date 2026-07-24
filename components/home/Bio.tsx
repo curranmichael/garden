@@ -1,14 +1,8 @@
-import type { RefObject } from 'react';
-
-/** Bio block; stays put while the rising panel covers it. */
-export default function Bio({
-  ref,
-}: {
-  ref: RefObject<HTMLDivElement | null>;
-}) {
+/** Bio block; part of the still landing. Its line-ends soften under the
+ *  progressive blur when a section is open. */
+export default function Bio() {
   return (
     <div
-      ref={ref}
       className="absolute z-10 text-xl leading-[26px] text-muted"
       style={{
         top: 'var(--bio-top)',

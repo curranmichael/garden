@@ -6,13 +6,13 @@ interface NameLineProps {
 }
 
 /**
- * Fixed name layer, pushed upward by the rising panel via --name-y.
- * Sits above the panel; clicking it returns to the landing state.
+ * The name line. Sits under the content blur, so its italic tail softens
+ * with the bio when a section is open; clicking it closes the section.
  */
 export default function NameLine({ active, onHome }: NameLineProps) {
   return (
     <div
-      className="absolute inset-x-0 top-0 z-30 will-change-transform"
+      className="absolute inset-x-0 top-0 z-10"
       style={{ transform: 'translateY(var(--name-y))' }}
     >
       <p

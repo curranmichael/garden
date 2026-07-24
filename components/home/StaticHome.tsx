@@ -2,6 +2,7 @@ import { cn } from '@/lib/cn';
 import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
 import DiaryList from './DiaryList';
 import type { TileBlocks } from './HomeExperience';
+import PoppyAscii from './PoppyAscii';
 import Tile from './Tile';
 
 interface StaticHomeProps {
@@ -106,6 +107,11 @@ export default function StaticHome({
           <DiaryList />
         </div>
       )}
+      {/* On the static layout the poppy is a still endpiece — no physics
+          (gated off with the choreography), fully in view, page-bottom. */}
+      <div className="mt-20 flex justify-center">
+        <PoppyAscii style={{ height: 'min(52dvh, 420px)' }} />
+      </div>
     </main>
   );
 }

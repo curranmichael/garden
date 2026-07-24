@@ -77,7 +77,10 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
           className={cn(
             'text-left text-xl leading-[26px] underline-offset-4 transition-colors duration-200 hover:underline',
             ghost ? 'text-ink' : 'text-panel-ink',
-            'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-panel-ink/70',
+            'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4',
+            ghost
+              ? 'focus-visible:outline-ink/70'
+              : 'focus-visible:outline-panel-ink/70',
             open && 'underline',
           )}
         >
@@ -112,7 +115,10 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
                 : popoverOpen
                   ? 'text-panel-ink'
                   : 'text-panel-ink/50',
-              'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-panel-ink/70',
+              'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4',
+              ghost
+                ? 'focus-visible:outline-ink/70'
+                : 'focus-visible:outline-panel-ink/70',
             )}
           >
             {mediumLabel(entry)}
