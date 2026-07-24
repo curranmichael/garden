@@ -8,30 +8,22 @@
   --color-panel: #ededec;
   --color-panel-ink: #161615;
   --color-tile: #d9d9d9;
+  /* Sampled poppy orange; inks active + hovered underlines */
+  --color-accent: #e1671f;
 
   --font-sans: var(--font-soehne);
   --font-serif: var(--font-signifier);
 }
 
 :root {
-  /* Horizontal rhythm: panel gutter + 20px content inset (88/108 at 1280) */
+  /* Horizontal rhythm: side gutter + 20px content inset (88/108 at 1280) */
   --gutter: clamp(24px, 6.875vw, 88px);
   --inset: 20px;
 
-  /* Scroll choreography, driven per-frame by useScrollChoreography.
-     Defaults are the landing state so SSR and first paint agree: nav text
-     centered on the viewport midline, header equidistant from the top and
-     the nav (values assume the 3-line bio; the hook re-measures on mount). */
-  --panel-rest: calc(50dvh - 26px);
-  --panel-top: var(--panel-rest);
-  --name-y: calc(25dvh - 65px);
-  --bio-top: calc(25dvh - 26px);
-  --grid-y: 0px;
-  --scroll-range: 0px;
-
-  /* Folder tab, positioned by NavBar measurements (label + 20px each side) */
-  --tab-x: var(--gutter);
-  --tab-w: 135px;
+  /* Landing header, from the Garden-2 Figma (name 150 / bio 189 at 832):
+     proportional to the viewport, 39px name-to-bio gap preserved. */
+  --name-y: calc(25dvh - 58px);
+  --bio-top: calc(25dvh - 19px);
 
   /* Softening on the hand-drawn underline strokes; blur() takes a Gaussian
      stdDeviation, so this is half the equivalent Figma blur value. */
@@ -53,9 +45,10 @@
 }
 
 @layer base {
-  /* Suppress rubber-banding only for the choreographed scene; the static
-     layout keeps native scrolling, including pull-to-refresh. Complement
-     of the .layout-static condition below. */
+  /* The choreographed scene's page never scrolls (content scrolls inside
+     its own layer); suppress rubber-banding there. The static layout keeps
+     native scrolling, including pull-to-refresh. Complement of the
+     .layout-static condition below. */
   @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
     html,
     body {
@@ -89,5 +82,14 @@
 
   .underline-stroke {
     filter: blur(var(--underline-blur));
+  }
+
+  /* The content field scrolls without chrome; the row cut at the fold is
+     the affordance. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
