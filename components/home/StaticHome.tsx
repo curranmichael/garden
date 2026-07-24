@@ -1,10 +1,11 @@
 import { cn } from '@/lib/cn';
 import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
+import DiaryList from './DiaryList';
 import type { TileBlocks } from './HomeExperience';
 import Tile from './Tile';
 
 interface StaticHomeProps {
-  active: boolean;
+  active: SectionId | null;
   blocks: TileBlocks;
   onSelect: (id: SectionId) => void;
 }
@@ -58,7 +59,7 @@ export default function StaticHome({
           <div key={row.join('-')} className="flex gap-x-[50px]">
             {row.map((id) => {
               const section = sections[id];
-              const current = active && id === 'inspiration';
+              const current = active === id;
               return (
                 <button
                   key={id}
@@ -86,7 +87,7 @@ export default function StaticHome({
           </div>
         ))}
       </nav>
-      {active && (
+      {active === 'inspiration' && (
         <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
           <div
             className="grid gap-5"
@@ -98,6 +99,11 @@ export default function StaticHome({
                   <Tile key={tile.id} block={null} />
                 ))}
           </div>
+        </div>
+      )}
+      {active === 'diary' && (
+        <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
+          <DiaryList />
         </div>
       )}
     </main>

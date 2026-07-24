@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from 'react';
+import type { SectionId } from './sections';
 import {
   DOCK_TOP,
   NAME_TO_BIO,
@@ -18,8 +19,9 @@ interface Options {
   gridRef: RefObject<HTMLElement | null>;
   /** Bio block, measured to center the header above the resting panel. */
   bioRef: RefObject<HTMLElement | null>;
-  /** Choreography only responds to scroll while a section is active. */
-  active: boolean;
+  /** Choreography only responds to scroll while a section is active; the
+   *  id (not a boolean) so switching sections re-measures the new content. */
+  active: SectionId | null;
 }
 
 /** Complement of the .layout-static condition in globals.css. */
@@ -82,10 +84,15 @@ export function useScrollChoreography({
       measure();
       // Signifier loads with display: swap; the bio can rewrap when it lands.
       document.fonts.ready.then(() => measure());
+      // Panel content can change height in place (a diary entry unfolding);
+      // the scroll range has to follow.
+      const contentObserver = new ResizeObserver(measure);
+      if (gridRef.current) contentObserver.observe(gridRef.current);
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', measure);
       return () => {
         if (raf) cancelAnimationFrame(raf);
+        contentObserver.disconnect();
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', measure);
         history.scrollRestoration = prevRestoration;

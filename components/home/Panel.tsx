@@ -1,8 +1,9 @@
 import type { RefObject } from 'react';
 import { cn } from '@/lib/cn';
-import { TAB_HEIGHT } from '@/lib/home/geometry';
+import { GRID_HEAD, TAB_HEIGHT } from '@/lib/home/geometry';
 import { sections, type SectionId } from '@/lib/home/sections';
 import type { PanelState, TileBlocks } from './HomeExperience';
+import DiaryList from './DiaryList';
 import NavBar from './NavBar';
 import TileGrid from './TileGrid';
 
@@ -112,12 +113,34 @@ export default function Panel({
         )}
         style={bodyBox}
       >
-        <TileGrid
-          tiles={sections[tabTarget].tiles}
-          blocks={tabTarget === 'inspiration' ? blocks : null}
-          state={state}
-          gridRef={gridRef}
-        />
+        {tabTarget === 'diary' ? (
+          // Same shell as TileGrid: fades with the panel state and rides
+          // --grid-y once the panel docks; gridRef sizes the scroll range.
+          <div
+            ref={gridRef}
+            className={cn(
+              'px-5 pb-5 transition-opacity duration-200 will-change-transform',
+              state === 'idle'
+                ? 'opacity-0'
+                : state === 'preview'
+                  ? 'opacity-20'
+                  : 'opacity-100',
+            )}
+            style={{
+              paddingTop: GRID_HEAD - TAB_HEIGHT,
+              transform: 'translateY(var(--grid-y))',
+            }}
+          >
+            <DiaryList />
+          </div>
+        ) : (
+          <TileGrid
+            tiles={sections[tabTarget].tiles}
+            blocks={tabTarget === 'inspiration' ? blocks : null}
+            state={state}
+            gridRef={gridRef}
+          />
+        )}
       </div>
       {/* During a preview, entering the body counts as the click. Unmounts
           outside preview so it never blocks tile links. */}

@@ -22,7 +22,7 @@ export default function HomeExperience() {
   const gridRef = useRef<HTMLDivElement>(null);
   const bioRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<SectionId | null>(null);
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState<SectionId | null>(null);
   // Fetched after mount: the server draws a fresh random set per request,
   // and the placeholder grid renders until it arrives — no hydration risk.
   const [blocks, setBlocks] = useState<TileBlocks>(null);
@@ -43,20 +43,22 @@ export default function HomeExperience() {
     : hovered
       ? 'preview'
       : 'idle';
-  const tabTarget: SectionId = active ? 'inspiration' : (hovered ?? 'inspiration');
+  const tabTarget: SectionId = active ?? hovered ?? 'inspiration';
 
   useScrollChoreography({ rootRef, gridRef, bioRef, active });
 
   const deactivate = useCallback(() => {
     window.scrollTo(0, 0);
-    setActive(false);
+    setActive(null);
   }, []);
 
+  // Clicking the open section's tab closes it; clicking another activatable
+  // tab swaps the panel's content in place (the panel itself doesn't move).
   const select = useCallback(
     (id: SectionId) => {
       if (!sections[id].activatable) return;
-      if (active) deactivate();
-      else setActive(true);
+      if (active === id) deactivate();
+      else setActive(id);
     },
     [active, deactivate],
   );
@@ -98,7 +100,7 @@ export default function HomeExperience() {
           <Bio ref={bioRef} />
           {/* Hovering above the resting panel closes it; 8px of hysteresis
               keeps grazing the tab's top edge from slamming it shut. */}
-          {active && atTop && (
+          {active !== null && atTop && (
             <div
               className="pointer-events-auto absolute inset-x-0 top-0 z-[15]"
               style={{ height: 'calc(var(--panel-top) - 8px)' }}
@@ -109,14 +111,14 @@ export default function HomeExperience() {
             state={panelState}
             tabTarget={tabTarget}
             hovered={hovered}
-            active={active}
+            active={active !== null}
             blocks={blocks}
             rootRef={rootRef}
             gridRef={gridRef}
             onHover={setHovered}
             onSelect={select}
           />
-          <NameLine active={active} onHome={deactivate} />
+          <NameLine active={active !== null} onHome={deactivate} />
         </div>
       </div>
       <div className="layout-static">

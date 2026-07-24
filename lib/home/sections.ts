@@ -39,7 +39,7 @@ export const sections: Record<SectionId, Section> = {
   diary: {
     id: 'diary',
     label: 'Diary',
-    activatable: false,
+    activatable: true,
     tiles: [],
     underline: { src: '/underlines/nav-diary.svg', width: 57, height: 6 },
   },
