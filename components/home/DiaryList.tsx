@@ -19,7 +19,7 @@ export default function DiaryList({ ghost = false }: DiaryListProps) {
   const [openSlug, setOpenSlug] = useState<string | null>(null);
 
   return (
-    <ul className="max-w-[746px]">
+    <ul>
       {diaryEntries.map((entry) => (
         <EntryRow
           key={entry.slug}
