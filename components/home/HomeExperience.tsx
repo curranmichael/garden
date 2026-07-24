@@ -58,6 +58,16 @@ export default function HomeExperience() {
       <div className="layout-choreo">
         <div aria-hidden className="h-dvh" />
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          {/* Scene floor while a section is open: clicks anywhere outside
+              the nav, the name, and the content column close it (Escape
+              and the name line do the same). */}
+          {active !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-auto absolute inset-0"
+              onClick={deactivate}
+            />
+          )}
           <Bio />
           {/* Petal centroid pinned at 50%+281px / 48.9dvh (the translate is
               in canvas percentages), stems running past the fold. Sits
@@ -71,7 +81,7 @@ export default function HomeExperience() {
               transform: 'translate(-58.2%, -10.2%)',
             }}
           />
-          <ContentField active={active} blocks={blocks} />
+          <ContentField active={active} blocks={blocks} onClose={deactivate} />
           <LandingNav active={active} onSelect={select} />
           <NameLine active={active !== null} onHome={deactivate} />
         </div>

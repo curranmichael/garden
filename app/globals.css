@@ -8,6 +8,8 @@
   --color-panel: #ededec;
   --color-panel-ink: #161615;
   --color-tile: #d9d9d9;
+  /* Sampled poppy orange; inks active + hovered underlines */
+  --color-accent: #e1671f;
 
   --font-sans: var(--font-soehne);
   --font-serif: var(--font-signifier);

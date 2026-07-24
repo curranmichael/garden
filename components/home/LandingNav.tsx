@@ -1,11 +1,12 @@
 import { cn } from '@/lib/cn';
 import { sections, type SectionId } from '@/lib/home/sections';
+import Underline from './Underline';
 
 /**
  * The scattered section index from the Garden-2 Figma: labels planted at
  * staggered heights down the left column, like markers in a bed. This is
- * the site's only nav — the open section's label inks bright and its
- * hand-drawn underline takes the poppy's orange.
+ * the site's only nav — each underline inks with its label, and the open
+ * section's takes the poppy's orange.
  */
 
 const PLACEMENT: { id: SectionId; top: string; indent: number }[] = [
@@ -14,11 +15,6 @@ const PLACEMENT: { id: SectionId; top: string; indent: number }[] = [
   { id: 'reading', top: '65.6dvh', indent: 35 },
   { id: 'about', top: '79.8dvh', indent: 138 },
 ];
-
-/** Underline stroke colors: the SVGs' native near-white, and the sampled
- *  poppy orange the Figma gives the active section. */
-const STROKE_REST = '#fdfdfc';
-const STROKE_ACTIVE = '#e1671f';
 
 export default function LandingNav({
   active,
@@ -43,7 +39,7 @@ export default function LandingNav({
               'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-muted/70',
               current ? 'text-ink' : 'text-muted',
               section.activatable
-                ? 'cursor-pointer hover:text-ink'
+                ? 'group cursor-pointer hover:text-ink'
                 : 'cursor-default',
             )}
             style={{
@@ -53,22 +49,7 @@ export default function LandingNav({
             onClick={() => onSelect(id)}
           >
             {section.label}
-            {/* The underline SVG as a mask, so the stroke keeps its
-                hand-drawn line but can change color. mask-size stretches
-                like the SVG's preserveAspectRatio="none". */}
-            <span
-              aria-hidden
-              className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] transition-colors duration-300"
-              style={{
-                width: section.underline.width,
-                height: section.underline.height,
-                backgroundColor: current ? STROKE_ACTIVE : STROKE_REST,
-                maskImage: `url(${section.underline.src})`,
-                WebkitMaskImage: `url(${section.underline.src})`,
-                maskSize: '100% 100%',
-                WebkitMaskSize: '100% 100%',
-              }}
-            />
+            <Underline {...section.underline} active={current} />
           </button>
         );
       })}

@@ -4,6 +4,7 @@ import DiaryList from './DiaryList';
 import type { TileBlocks } from './HomeExperience';
 import PoppyAscii from './PoppyAscii';
 import Tile from './Tile';
+import Underline from './Underline';
 
 interface StaticHomeProps {
   active: SectionId | null;
@@ -38,16 +39,10 @@ export default function StaticHome({
             href="https://enai.io"
             target="_blank"
             rel="noreferrer"
-            className="relative inline-block"
+            className="group relative inline-block"
           >
             Enai
-            <img
-              src="/underlines/enai.svg"
-              alt=""
-              width={45}
-              height={7}
-              className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
-            />
+            <Underline src="/underlines/enai.svg" width={45} height={7} />
           </a>
           , a computer that organizes itself for you. I&rsquo;m interested in
           media design as it relates to attention and phenomenology in
@@ -70,18 +65,12 @@ export default function StaticHome({
                     'relative block text-xl leading-[26px] transition-colors duration-200',
                     'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-muted/70',
                     current ? 'text-ink' : 'text-muted',
-                    section.activatable ? 'cursor-pointer' : 'cursor-default',
+                    section.activatable ? 'group cursor-pointer' : 'cursor-default',
                   )}
                   onClick={() => onSelect(id)}
                 >
                   {section.label}
-                  <img
-                    src={section.underline.src}
-                    alt=""
-                    width={section.underline.width}
-                    height={section.underline.height}
-                    className="underline-stroke pointer-events-none absolute -left-[3px] top-[23px] max-w-none"
-                  />
+                  <Underline {...section.underline} active={current} />
                 </button>
               );
             })}

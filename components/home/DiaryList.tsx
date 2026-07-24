@@ -130,7 +130,7 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
         <div
           className={cn(
             'max-w-[620px] space-y-4 pb-6 pr-8 text-lg leading-[26px] transition-colors duration-200',
-            ghost ? 'text-ink/80' : 'text-panel-ink/80',
+            ghost ? 'text-ink' : 'text-panel-ink/80',
           )}
         >
           {entry.body.length ? (
@@ -139,7 +139,7 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
             <p
               className={cn(
                 'italic',
-                ghost ? 'text-ink/45' : 'text-panel-ink/45',
+                ghost ? 'text-ink/60' : 'text-panel-ink/45',
               )}
             >
               Coming soon.
