@@ -44,12 +44,23 @@ interface EntryRowProps {
   onToggle: () => void;
 }
 
+/** Rough popover card height; used to decide whether to flip it upward. */
+const POPOVER_ROOM = 320;
+
 function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
   // Hover (mouse) and pinned (tap/keyboard) both raise the popover; touch
   // browsers fire pointerenter on tap, so hover is gated to mouse pointers.
   const [hovering, setHovering] = useState(false);
   const [pinned, setPinned] = useState(false);
+  // Rows low in the viewport open the popover upward so it isn't clipped.
+  const [flipUp, setFlipUp] = useState(false);
   const popoverOpen = hovering || pinned;
+
+  const placePopover = (tag: HTMLElement) => {
+    setFlipUp(
+      tag.getBoundingClientRect().bottom + POPOVER_ROOM > window.innerHeight,
+    );
+  };
 
   return (
     <li
@@ -78,7 +89,10 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
             aria-expanded={popoverOpen}
             aria-label={`Show the ${mediumLabel(entry)} original`}
             onPointerEnter={(e) => {
-              if (e.pointerType === 'mouse') setHovering(true);
+              if (e.pointerType === 'mouse') {
+                placePopover(e.currentTarget);
+                setHovering(true);
+              }
             }}
             onPointerLeave={(e) => {
               if (e.pointerType === 'mouse') {
@@ -86,7 +100,10 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
                 setPinned(false);
               }
             }}
-            onClick={() => setPinned((p) => !p)}
+            onClick={(e) => {
+              placePopover(e.currentTarget);
+              setPinned((p) => !p);
+            }}
             onBlur={() => setPinned(false)}
             className={cn(
               'font-sans text-[13px] leading-[26px] tracking-wide transition-colors duration-200',
@@ -100,7 +117,7 @@ function EntryRow({ entry, ghost, open, onToggle }: EntryRowProps) {
           >
             {mediumLabel(entry)}
           </button>
-          {popoverOpen && <MediumPopover entry={entry} />}
+          {popoverOpen && <MediumPopover entry={entry} flipUp={flipUp} />}
         </span>
       </div>
       {open && (
@@ -177,12 +194,23 @@ function renderBody(body: string[], ghost: boolean): ReactNode[] {
  * so it grows inward. Shows a plain placeholder square until the image
  * lands (or if the file isn't there yet).
  */
-function MediumPopover({ entry }: { entry: DiaryEntry }) {
+function MediumPopover({
+  entry,
+  flipUp,
+}: {
+  entry: DiaryEntry;
+  flipUp: boolean;
+}) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="absolute right-0 top-[calc(100%+8px)] z-30 w-72 rounded-[4px] bg-panel p-1.5 shadow-[0_8px_32px_rgba(22,22,21,0.3)] ring-1 ring-panel-ink/10">
+    <div
+      className={cn(
+        'absolute right-0 z-30 w-72 rounded-[4px] bg-panel p-1.5 shadow-[0_8px_32px_rgba(22,22,21,0.3)] ring-1 ring-panel-ink/10',
+        flipUp ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]',
+      )}
+    >
       {(!loaded || failed) && (
         <div className="aspect-[4/3] w-full rounded-[2px] bg-tile" />
       )}
