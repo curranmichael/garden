@@ -33,8 +33,9 @@ interface Particle {
   vy: number;
   /** Petal glyphs are light and splash freely; foliage stays planted. */
   petal: boolean;
-  /** Deterministic per-glyph variation so the motion isn't uniform. */
-  jitter: number;
+  /** Per-glyph force multiplier: deterministic variation (so the motion
+   *  isn't uniform) folded together with the petal/foliage mass. */
+  forceScale: number;
   spin: 1 | -1;
 }
 
@@ -168,6 +169,10 @@ export default function PoppyAscii({
     const canvas = canvasRef.current;
     const frame = frameRef.current;
     if (!canvas || !frame) return;
+    // The default context flags are load-bearing: the canvas must stay
+    // transparent (no alpha:false — the page shows through between the
+    // glyphs), and nothing may opt into pixel readback (willReadFrequently,
+    // getImageData), which would silently drop the canvas off the GPU path.
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -177,12 +182,16 @@ export default function PoppyAscii({
     let frameH = 0;
     /** Rendered-size factor applied to every speed/force constant. */
     let scale = 1;
+    /** Backing-store pixel ratio, capped: past ~2.5x the extra pixels cost
+     *  clear/fill rate every frame with no visible sharpness gain on glyph
+     *  art this size (2x laptops are untouched by the cap). */
+    let dpr = 1;
 
     const particles: Particle[] = template.map((t) => ({
       char: t.char,
       color: t.color,
       petal: t.petal,
-      jitter: t.jitter,
+      forceScale: t.jitter / (t.petal ? 1 : FOLIAGE_MASS),
       spin: t.spin,
       hx: 0,
       hy: 0,
@@ -192,6 +201,12 @@ export default function PoppyAscii({
       vy: 0,
     }));
     const splashes: Splash[] = [];
+    /** Per-splash invariants, hoisted out of the particle loop each step;
+     *  fixed-size so the hot path allocates nothing. */
+    const ringX = new Float64Array(MAX_SPLASHES);
+    const ringY = new Float64Array(MAX_SPLASHES);
+    const ringR = new Float64Array(MAX_SPLASHES);
+    const ringAmp = new Float64Array(MAX_SPLASHES);
 
     /** Derive the glyph grid from the frame's rendered CSS size, offset
      *  into the bleed canvas; glyphs snap home (resizing mid-burst isn't
@@ -204,7 +219,7 @@ export default function PoppyAscii({
       frameH = box.height;
       scale = frameH / REFERENCE_HEIGHT;
       splashes.length = 0; // splash coords are stale at the new size
-      const dpr = window.devicePixelRatio || 1;
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -225,26 +240,56 @@ export default function PoppyAscii({
       });
     };
 
+    /** With ?perf in the URL, rolling per-frame averages for the physics
+     *  step, the clear, and the glyph pass are logged every 120 frames. */
+    const perfOn = new URLSearchParams(window.location.search).has('perf');
+    let perfStep = 0;
+    let perfClear = 0;
+    let perfGlyphs = 0;
+    let perfFrames = 0;
+
+    /** Whether the context currently holds a per-glyph matrix instead of
+     *  the base dpr matrix. */
+    let transformed = false;
+
     const draw = () => {
+      const t0 = perfOn ? performance.now() : 0;
       ctx.clearRect(0, 0, width, height);
+      const t1 = perfOn ? performance.now() : 0;
       for (const p of particles) {
         const dx = p.x - p.hx;
         const dy = p.y - p.hy;
-        const disp = Math.hypot(dx, dy);
+        const dsq = dx * dx + dy * dy;
         ctx.fillStyle = p.color;
-        if (disp < 0.5) {
+        if (dsq < 0.25) {
+          if (transformed) {
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            transformed = false;
+          }
           ctx.fillText(p.char, p.hx, p.hy);
         } else {
-          // Tumble and swell with displacement; both relax to identity
-          // as the spring brings the glyph home.
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(Math.max(-0.9, Math.min(0.9, dx * 0.0075)) * p.spin);
-          const s = 1 + Math.min(disp / 180, 0.35);
-          ctx.scale(s, s);
+          // Tumble and swell with displacement; both relax to identity as
+          // the spring brings the glyph home. One matrix composed by hand
+          // (uniform scale commutes with rotation) replaces the
+          // save/translate/rotate/scale/restore stack, whose state push
+          // and pop preserved nothing this loop needs.
+          const disp = Math.sqrt(dsq);
+          const theta = Math.max(-0.9, Math.min(0.9, dx * 0.0075)) * p.spin;
+          const m = (1 + Math.min(disp / 180, 0.35)) * dpr;
+          const cos = Math.cos(theta) * m;
+          const sin = Math.sin(theta) * m;
+          ctx.setTransform(cos, sin, -sin, cos, p.x * dpr, p.y * dpr);
+          transformed = true;
           ctx.fillText(p.char, 0, 0);
-          ctx.restore();
         }
+      }
+      // Restoring the base matrix here is load-bearing: the next frame's
+      // clearRect must never run under a leftover glyph transform.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      transformed = false;
+      if (perfOn) {
+        perfClear += t1 - t0;
+        perfGlyphs += performance.now() - t1;
       }
     };
 
@@ -267,31 +312,50 @@ export default function PoppyAscii({
           splashes.splice(i, 1);
         }
       }
-      if (splashes.length) awake = true;
+      const live = splashes.length;
+      if (live) awake = true;
+      // Everything that varies per splash but not per glyph is hoisted out
+      // of the particle loop. Only the ignition term depends on the pair,
+      // so two exps remain inside the crest window (which most pairs skip).
+      const invWidth = 1 / (WAVE_WIDTH * scale);
+      const invIgnition = 1 / (WAVE_IGNITION * scale);
+      const invAtten = 1 / (WAVE_ATTENUATION * scale);
+      for (let j = 0; j < live; j++) {
+        const s = splashes[j];
+        ringX[j] = s.x;
+        ringY[j] = s.y;
+        ringR[j] = s.age * WAVE_SPEED * scale;
+        ringAmp[j] =
+          WAVE_FORCE * scale * s.strength * Math.exp(-s.age * WAVE_DECAY);
+      }
       for (const p of particles) {
         let fx = 0;
         let fy = 0;
-        for (const s of splashes) {
-          const dx = p.x - s.x;
-          const dy = p.y - s.y;
-          const d = Math.hypot(dx, dy);
-          const off = (d - s.age * WAVE_SPEED * scale) / (WAVE_WIDTH * scale);
+        for (let j = 0; j < live; j++) {
+          const dx = p.x - ringX[j];
+          const dy = p.y - ringY[j];
+          const d = Math.sqrt(dx * dx + dy * dy);
+          const off = (d - ringR[j]) * invWidth;
           if (off < -2 || off > 2) continue; // outside the crest
-          const ign = d / (WAVE_IGNITION * scale);
+          const ign = d * invIgnition;
           const f =
-            ((WAVE_FORCE * scale * s.strength * Math.exp(-off * off) *
-              Math.exp(-s.age * WAVE_DECAY) *
+            ((ringAmp[j] *
+              Math.exp(-off * off) *
               (1 - Math.exp(-ign * ign))) /
-              (1 + d / (WAVE_ATTENUATION * scale))) *
-            (p.jitter / (p.petal ? 1 : FOLIAGE_MASS));
+              (1 + d * invAtten)) *
+            p.forceScale;
           fx += (dx / (d || 1)) * f;
           fy += (dy / (d || 1)) * f;
         }
         if (fx === 0 && fy === 0) {
           // No wave under this glyph: fall back into place. Fades toward
           // home so equilibrium stays exactly at (hx, hy).
-          const disp = Math.hypot(p.x - p.hx, p.y - p.hy);
-          if (disp > 0.5) fy = GRAVITY * scale * Math.min(disp / FALL_REF, 1);
+          const rx = p.x - p.hx;
+          const ry = p.y - p.hy;
+          const dsq = rx * rx + ry * ry;
+          if (dsq > 0.25) {
+            fy = GRAVITY * scale * Math.min(Math.sqrt(dsq) / FALL_REF, 1);
+          }
         }
         p.vx += (SPRING * (p.hx - p.x) - DAMP * p.vx + fx) * dt;
         p.vy += (SPRING * (p.hy - p.y) - DAMP * p.vy + fy) * dt;
@@ -312,8 +376,19 @@ export default function PoppyAscii({
     const loop = (now: number) => {
       const dt = Math.min((now - last) / 1000, 1 / 30);
       last = now;
+      const t0 = perfOn ? performance.now() : 0;
       const awake = step(dt);
+      if (perfOn) perfStep += performance.now() - t0;
       draw();
+      if (perfOn && ++perfFrames === 120) {
+        console.log(
+          `[poppy] ms/frame avg of 120 — step ${(perfStep / 120).toFixed(2)}, ` +
+            `clear ${(perfClear / 120).toFixed(2)}, ` +
+            `glyphs ${(perfGlyphs / 120).toFixed(2)}`,
+        );
+        perfStep = perfClear = perfGlyphs = 0;
+        perfFrames = 0;
+      }
       if (awake) {
         raf = requestAnimationFrame(loop);
       } else {
@@ -345,12 +420,14 @@ export default function PoppyAscii({
       for (const p of particles) {
         const dx = p.x - x;
         const dy = p.y - y;
-        const d = Math.hypot(dx, dy);
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d >= r0) continue;
         const kick =
-          (PLOP_KICK * scale * strength * Math.sin(Math.PI * (d / r0)) *
-            p.jitter) /
-          (p.petal ? 1 : FOLIAGE_MASS);
+          PLOP_KICK *
+          scale *
+          strength *
+          Math.sin(Math.PI * (d / r0)) *
+          p.forceScale;
         p.vx += (dx / (d || 1)) * kick;
         p.vy += (dy / (d || 1)) * kick - (p.petal ? kick * PLOP_UP : 0);
       }
