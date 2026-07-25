@@ -26,6 +26,12 @@ import Tile from './Tile';
  * section's label, or Escape via HomeExperience.
  */
 const MARGIN = 'var(--gutter) + var(--inset)';
+/** The overlay's top bar: the band above the content, where the × lives.
+ *  Its bottom is set where the veil's ramp completes (see the
+ *  ProgressiveBlur props below), so the bar and the sharp zone of the
+ *  progressive blur read as one region and the content only ever floats
+ *  on the full wash. Taller than the side margins on every screen. */
+const BAR = 'env(safe-area-inset-top, 0px) + 144px';
 
 /* The swipe-down dismissal: a single-finger drag that begins with the
  * scroller at its top follows the finger down (with resistance), then
@@ -214,12 +220,16 @@ export default function SectionOverlay({
       {/* Fewer, softer layers than the desktop veil: each one blurs its
           full box before masking, and four full-viewport backdrop passes
           are what a phone GPU can absorb through the radius fade. */}
+      {/* ramp/lead are tuned so the last layer reaches full blur around
+          the top bar's bottom (stop(4) = 0.8 * ramp * viewport height ≈
+          144px on phones): the bar above stays legible, everything the
+          content passes over is fully washed. */}
       <ProgressiveBlur
         direction="to bottom"
         maxBlur={24}
         layerCount={4}
-        ramp={0.35}
-        lead={80}
+        ramp={0.22}
+        lead={64}
         visible={open}
         fadeDuration={reduced ? 0 : open ? 450 : 350}
         fadeDelay={reduced ? 0 : open ? 0 : 120}
@@ -259,10 +269,7 @@ export default function SectionOverlay({
             : 'translate-y-4 opacity-0 delay-0 duration-[200ms]',
         )}
         style={{
-          // A taller band than the side margins, so the × keeps a clear
-          // row of its own above the first content row; the max() keeps
-          // the reduced-motion desktop on its own margin grammar.
-          paddingTop: `max(calc(env(safe-area-inset-top, 0px) + 96px), calc(${MARGIN}))`,
+          paddingTop: `calc(${BAR})`,
           paddingBottom: `calc(${MARGIN})`,
           paddingLeft: `calc(${MARGIN})`,
           paddingRight: `calc(${MARGIN})`,
@@ -302,9 +309,9 @@ export default function SectionOverlay({
           </div>
         )}
       </div>
-      {/* Close, centered in the top margin band at the content's right
-          edge; fades on the content's own schedule. p-3 pads the tap
-          target without moving the glyph. */}
+      {/* Close, centered in the top bar at the content's right edge;
+          fades on the content's own schedule. p-3 pads the tap target
+          without moving the glyph. */}
       <button
         type="button"
         inert={!open}
@@ -320,7 +327,9 @@ export default function SectionOverlay({
             : 'opacity-0 delay-0 duration-[200ms]',
         )}
         style={{
-          top: `calc(env(safe-area-inset-top, 0px) + max(96px, ${MARGIN}) / 2)`,
+          // Half the bar's height below the safe area: dead center of
+          // the usable band.
+          top: `calc(env(safe-area-inset-top, 0px) + 72px)`,
           right: `calc((${MARGIN}) - 12px)`,
         }}
       >
