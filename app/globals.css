@@ -60,21 +60,24 @@
        poppy clear of the bio on short screens: the svh terms set the
        scattered look on tall phones, the px terms win below them and
        slide the column down into native scroll. */
-    --name-y: calc(25svh - 58px);
+    /* The top margin matches the left one — on a tall portrait frame the
+       header hugs the corner instead of inheriting the desktop's 25dvh
+       band. */
+    --name-y: calc(var(--gutter) + var(--inset));
     /* The name wraps to two lines here; keep the 13px name-to-bio gap. */
-    --bio-top: calc(25svh + 7px);
-    --nav-top-diary: max(54svh, calc(var(--bio-top) + 230px));
+    --bio-top: calc(var(--gutter) + var(--inset) + 65px);
+    --nav-top-diary: max(44.2svh, calc(var(--bio-top) + 230px));
     --nav-indent-diary: 10px;
-    --nav-top-inspiration: max(63svh, calc(var(--bio-top) + 290px));
+    --nav-top-inspiration: max(54.8svh, calc(var(--bio-top) + 290px));
     --nav-indent-inspiration: 40px;
-    --nav-top-reading: max(72svh, calc(var(--bio-top) + 350px));
+    --nav-top-reading: max(65.6svh, calc(var(--bio-top) + 350px));
     --nav-indent-reading: 16px;
-    --nav-top-about: max(81svh, calc(var(--bio-top) + 410px));
+    --nav-top-about: max(79.8svh, calc(var(--bio-top) + 410px));
     --nav-indent-about: 62px;
     /* Planted right of center and cropped by the screen edge, stems
        running past the fold — the scene ends exactly at the stem tips. */
     --poppy-left: calc(50% + 12px);
-    --poppy-top: max(50svh, calc(var(--bio-top) + 205px));
+    --poppy-top: max(44svh, calc(var(--bio-top) + 205px));
     --poppy-h: clamp(460px, 66svh, 720px);
     --poppy-shift: none;
     --scene-min-h: max(100svh, calc(var(--poppy-top) + var(--poppy-h)));

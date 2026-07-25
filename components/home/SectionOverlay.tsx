@@ -78,8 +78,8 @@ export default function SectionOverlay({
         direction="to bottom"
         maxBlur={24}
         layerCount={4}
-        ramp={0.5}
-        lead={120}
+        ramp={0.35}
+        lead={80}
         visible={open}
         fadeDuration={reduced ? 0 : open ? 450 : 350}
         fadeDelay={reduced ? 0 : open ? 0 : 120}
@@ -107,7 +107,10 @@ export default function SectionOverlay({
             : 'translate-y-2 opacity-0 delay-0 duration-[200ms]',
         )}
         style={{
-          paddingTop: `max(calc(env(safe-area-inset-top, 0px) + 96px), calc(${MARGIN}))`,
+          // Even margins all around, like the desktop column mirrors the
+          // page margin; the veil's ramp (above) is tuned so the scene is
+          // already softened where the first row lands.
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + (${MARGIN}))`,
           paddingBottom: `calc(${MARGIN})`,
           paddingLeft: `calc(${MARGIN})`,
           paddingRight: `calc(${MARGIN})`,
