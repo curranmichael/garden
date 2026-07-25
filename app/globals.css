@@ -1,15 +1,43 @@
 @import "tailwindcss";
 
+/* Two schemes on the Radix (v1) sand scale, following the system setting.
+   Dark is the original Garden Figma — dark page, light panel — built from
+   sandDark 1/11/12. Light maps each token to the same step of the light
+   sand scale, so the inverted panel and the contrast relationships carry
+   over unchanged. */
+:root {
+  --page: #161615; /* sand1 */
+  --ink: #ededec; /* sand12 */
+  --muted: #a1a09a; /* sand11 */
+  --panel: #ededec;
+  --panel-ink: #161615;
+  --tile: #d9d9d9; /* Figma tile gray, not on the sand scale */
+  /* Sampled poppy orange; inks active + hovered underlines. Shared by
+     both schemes. */
+  --accent: #e1671f;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --page: #fdfdfc; /* sand1 */
+    --ink: #1b1b18; /* sand12 */
+    --muted: #706f6c; /* sand11 */
+    --panel: #1b1b18;
+    --panel-ink: #fdfdfc;
+    --tile: #2e2e2b; /* the tile gray mirrored; lands on sandDark 5 */
+    color-scheme: light;
+  }
+}
+
 @theme inline {
-  /* Single fixed scheme from the Garden Figma: dark page, light panel */
-  --color-page: #161615;
-  --color-ink: #ededec;
-  --color-muted: #a1a09a;
-  --color-panel: #ededec;
-  --color-panel-ink: #161615;
-  --color-tile: #d9d9d9;
-  /* Sampled poppy orange; inks active + hovered underlines */
-  --color-accent: #e1671f;
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-panel: var(--panel);
+  --color-panel-ink: var(--panel-ink);
+  --color-tile: var(--tile);
+  --color-accent: var(--accent);
 
   --font-sans: var(--font-soehne);
   --font-serif: var(--font-signifier);
