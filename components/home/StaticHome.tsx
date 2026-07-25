@@ -1,3 +1,4 @@
+import { cn } from '@/lib/cn';
 import { SECTION_ORDER, type SectionId } from '@/lib/home/sections';
 import Bio from './Bio';
 import NameLine from './NameLine';
@@ -35,8 +36,22 @@ export default function StaticHome({
       className="relative overflow-clip"
       style={{ minHeight: 'var(--scene-min-h)' }}
     >
-      <NameLine active={active !== null} onHome={onClose} />
-      <Bio />
+      {/* The header sits where the full-screen veil is at its weakest
+          (the ramp only reaches full blur further down), so lightly
+          blurred name/bio would collide with the overlay's first rows —
+          fade them out under an open section instead. Desktop never has
+          this problem: there the header lives outside the veil. The
+          poppy and nav labels stay as the ember backdrop; they sit in
+          the veil's fully washed zone. */}
+      <div
+        className={cn(
+          'transition-opacity duration-[350ms] ease-out motion-reduce:transition-none',
+          active !== null && 'opacity-0',
+        )}
+      >
+        <NameLine active={active !== null} onHome={onClose} />
+        <Bio />
+      </div>
       <PoppyAscii
         interactive={active === null}
         className="absolute z-[12]"
