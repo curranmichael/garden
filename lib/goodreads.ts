@@ -72,7 +72,10 @@ async function fetchShelf(shelf: Book['shelf']): Promise<Book[]> {
   }
 }
 
-/** Currently-reading first, then read; within each, newest additions first. */
+/** "Ursula K. Le Guin" → "Guin": good enough to shelve by. */
+const surname = (author: string) => author.trim().split(/\s+/).at(-1) ?? '';
+
+/** Both shelves together, alphabetical by author surname, then title. */
 export async function getBooks(): Promise<Book[]> {
   const [current, read] = await Promise.all([
     fetchShelf('currently-reading'),
@@ -82,5 +85,12 @@ export async function getBooks(): Promise<Book[]> {
   for (const book of [...current, ...read]) {
     if (!byId.has(book.id)) byId.set(book.id, book);
   }
-  return [...byId.values()];
+  return [...byId.values()].sort(
+    (a, b) =>
+      surname(a.author).localeCompare(surname(b.author), 'en', {
+        sensitivity: 'base',
+      }) ||
+      a.author.localeCompare(b.author, 'en') ||
+      a.title.localeCompare(b.title, 'en'),
+  );
 }
