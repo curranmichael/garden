@@ -3,6 +3,14 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { CHOREO_MEDIA } from '@/lib/home/media';
 import { CELL_ASPECT, CHARS, COLORS, PALETTE } from './poppyData';
+import {
+  createPoppyGlRenderer,
+  ROT_COEFF,
+  ROT_MAX,
+  SWELL_DIV,
+  SWELL_MAX,
+  TILE_PAD,
+} from './poppyGl';
 
 /**
  * ASCII California poppy. At rest it is a still drawing; under the
@@ -14,11 +22,20 @@ import { CELL_ASPECT, CHARS, COLORS, PALETTE } from './poppyData';
  * Physics never touches React state — one rAF loop owns the canvas, and it
  * stops whenever the flower settles.
  *
+ * Rendering is two stacked canvases with a rest/motion handoff. At rest, a
+ * 2D canvas shows the poster in native fillText (crisp hinted text, zero
+ * per-frame cost). The moment glyphs fly, the poster blanks and a WebGL2
+ * layer draws every glyph as an instanced quad from a glyph atlas — the
+ * per-frame cost is one small buffer upload, not a full-surface raster,
+ * which is what made splashes rendering-bound. On settle the poster
+ * repaints and the GL layer presents transparent. Without WebGL2 the 2D
+ * canvas animates alone, repainting only the dirty region.
+ *
  * The component's frame sizes itself in CSS (dvh-proportional, per the
  * Garden-2 Figma frame) and the physics re-derives the glyph grid from its
- * rendered rect, so the parent positions it like any other element. The
- * canvas inside bleeds BLEED past every edge of the frame so burst glyphs
- * are never clipped mid-flight.
+ * rendered rect, so the parent positions it like any other element. Both
+ * canvases bleed BLEED past every edge of the frame so burst glyphs are
+ * never clipped mid-flight.
  */
 
 interface Particle {
@@ -105,6 +122,18 @@ const GRID_COLS = Math.max(...CHARS.map((r) => r.length));
  *  the width-relative percentages the horizontal sides need. */
 const FRAME_ASPECT = (GRID_COLS * CELL_ASPECT) / ROWS;
 
+/** Shared geometry for the two stacked bleed canvases. Replaced elements
+ *  don't stretch from opposing insets, so the bleed is spelled out as
+ *  explicit size + offset. */
+const bleedCanvasStyle: CSSProperties = {
+  position: 'absolute',
+  left: `${(-BLEED / FRAME_ASPECT) * 100}%`,
+  top: `${-BLEED * 100}%`,
+  width: `${(1 + (2 * BLEED) / FRAME_ASPECT) * 100}%`,
+  height: `${(1 + 2 * BLEED) * 100}%`,
+  pointerEvents: 'none',
+};
+
 /** Orange hues are petals; everything else is stem and leaf. */
 function isPetalColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -154,6 +183,7 @@ export default function PoppyAscii({
   style?: CSSProperties;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const glCanvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const interactiveRef = useRef(interactive);
   const wakeRef = useRef<(() => void) | null>(null);
@@ -167,25 +197,35 @@ export default function PoppyAscii({
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const glCanvas = glCanvasRef.current;
     const frame = frameRef.current;
-    if (!canvas || !frame) return;
+    if (!canvas || !glCanvas || !frame) return;
     // The default context flags are load-bearing: the canvas must stay
     // transparent (no alpha:false — the page shows through between the
     // glyphs), and nothing may opt into pixel readback (willReadFrequently,
     // getImageData), which would silently drop the canvas off the GPU path.
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const renderer = createPoppyGlRenderer(
+      glCanvas,
+      template.map((t) => ({ char: t.char, color: t.color })),
+      FONT,
+    );
 
     let width = 0;
     let height = 0;
     /** The flower's layout box height (the canvas is BLEED larger). */
     let frameH = 0;
+    /** Glyph cell height, for dirty-rect margins in the 2D fallback. */
+    let cellHpx = 0;
     /** Rendered-size factor applied to every speed/force constant. */
     let scale = 1;
     /** Backing-store pixel ratio, capped: past ~2.5x the extra pixels cost
      *  clear/fill rate every frame with no visible sharpness gain on glyph
      *  art this size (2x laptops are untouched by the cap). */
     let dpr = 1;
+    /** True while the poster is blanked and the GL layer is presenting. */
+    let glActive = false;
 
     const particles: Particle[] = template.map((t) => ({
       char: t.char,
@@ -225,6 +265,7 @@ export default function PoppyAscii({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const cellH = box.height / ROWS;
       const cellW = cellH * CELL_ASPECT;
+      cellHpx = cellH;
       const offX = box.left - rect.left;
       const offY = box.top - rect.top;
       ctx.font = `${cellH * 0.95}px ${FONT}`;
@@ -238,63 +279,139 @@ export default function PoppyAscii({
         p.vx = 0;
         p.vy = 0;
       });
+      renderer?.resize(width, height, dpr, cellH);
+      if (glActive) {
+        glActive = false;
+        renderer?.clear();
+      }
     };
 
     /** With ?perf in the URL, rolling per-frame averages for the physics
-     *  step, the clear, and the glyph pass are logged every 120 frames. */
+     *  step and the render are logged every 120 frames. */
     const perfOn = new URLSearchParams(window.location.search).has('perf');
     let perfStep = 0;
-    let perfClear = 0;
-    let perfGlyphs = 0;
+    let perfRender = 0;
     let perfFrames = 0;
 
-    /** Whether the context currently holds a per-glyph matrix instead of
-     *  the base dpr matrix. */
-    let transformed = false;
-
-    const draw = () => {
-      const t0 = perfOn ? performance.now() : 0;
+    /** The resting poster: every glyph at home in native fillText. Painted
+     *  on transitions only, never per frame. */
+    const paintRest = () => {
       ctx.clearRect(0, 0, width, height);
-      const t1 = perfOn ? performance.now() : 0;
       for (const p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.char, p.hx, p.hy);
+      }
+    };
+
+    /** 2D motion fallback (no WebGL2, or the context died): repaint only
+     *  the union of last frame's and this frame's moving-glyph bounds.
+     *  Clipping to that union keeps boundary glyphs from double-painting
+     *  their antialiased edges; resting glyphs sliced by the boundary
+     *  match their stale outside half exactly. */
+    let prevDirty: [number, number, number, number] | null = null;
+    const draw2DMotion = () => {
+      // Covers a fully swelled, fully rotated tile around either endpoint.
+      const margin = cellHpx * TILE_PAD * (1 + SWELL_MAX);
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      let moving = false;
+      for (const p of particles) {
+        const dx = p.x - p.hx;
+        const dy = p.y - p.hy;
+        if (dx * dx + dy * dy < 0.25) continue;
+        moving = true;
+        // Both endpoints: the glyph must be erased where it was drawn and
+        // drawn where it is now.
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+        if (p.hx < minX) minX = p.hx;
+        if (p.hx > maxX) maxX = p.hx;
+        if (p.hy < minY) minY = p.hy;
+        if (p.hy > maxY) maxY = p.hy;
+      }
+      const cur: [number, number, number, number] | null = moving
+        ? [
+            Math.max(0, minX - margin),
+            Math.max(0, minY - margin),
+            Math.min(width, maxX + margin),
+            Math.min(height, maxY + margin),
+          ]
+        : null;
+      const a = cur ?? prevDirty;
+      if (!a) return;
+      const b = prevDirty ?? a;
+      const x0 = Math.min(a[0], b[0]);
+      const y0 = Math.min(a[1], b[1]);
+      const x1 = Math.max(a[2], b[2]);
+      const y1 = Math.max(a[3], b[3]);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, y0, x1 - x0, y1 - y0);
+      ctx.clip();
+      ctx.clearRect(x0, y0, x1 - x0, y1 - y0);
+      for (const p of particles) {
+        const hit =
+          (p.x > x0 - margin &&
+            p.x < x1 + margin &&
+            p.y > y0 - margin &&
+            p.y < y1 + margin) ||
+          (p.hx > x0 - margin &&
+            p.hx < x1 + margin &&
+            p.hy > y0 - margin &&
+            p.hy < y1 + margin);
+        if (!hit) continue;
         const dx = p.x - p.hx;
         const dy = p.y - p.hy;
         const dsq = dx * dx + dy * dy;
         ctx.fillStyle = p.color;
         if (dsq < 0.25) {
-          if (transformed) {
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            transformed = false;
-          }
           ctx.fillText(p.char, p.hx, p.hy);
         } else {
-          // Tumble and swell with displacement; both relax to identity as
-          // the spring brings the glyph home. One matrix composed by hand
-          // (uniform scale commutes with rotation) replaces the
-          // save/translate/rotate/scale/restore stack, whose state push
-          // and pop preserved nothing this loop needs.
-          const disp = Math.sqrt(dsq);
-          const theta = Math.max(-0.9, Math.min(0.9, dx * 0.0075)) * p.spin;
-          const m = (1 + Math.min(disp / 180, 0.35)) * dpr;
+          // Tumble and swell with displacement (shared profile with the
+          // GL path); one composed matrix instead of save/rotate/scale.
+          const theta =
+            Math.max(-ROT_MAX, Math.min(ROT_MAX, dx * ROT_COEFF)) * p.spin;
+          const m = (1 + Math.min(Math.sqrt(dsq) / SWELL_DIV, SWELL_MAX)) * dpr;
           const cos = Math.cos(theta) * m;
           const sin = Math.sin(theta) * m;
           ctx.setTransform(cos, sin, -sin, cos, p.x * dpr, p.y * dpr);
-          transformed = true;
           ctx.fillText(p.char, 0, 0);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
       }
-      // Restoring the base matrix here is load-bearing: the next frame's
-      // clearRect must never run under a leftover glyph transform.
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      transformed = false;
-      if (perfOn) {
-        perfClear += t1 - t0;
-        perfGlyphs += performance.now() - t1;
+      ctx.restore(); // pops the clip and any leftover glyph matrix
+      prevDirty = cur;
+    };
+
+    /** One motion frame: GL when available, dirty-rect 2D otherwise. */
+    const render = () => {
+      if (renderer && !renderer.lost) {
+        if (!glActive) {
+          // Handoff to the GL layer: blank the poster in the same frame
+          // the first GL image presents, so there is no gap or overlap.
+          glActive = true;
+          ctx.clearRect(0, 0, width, height);
+        }
+        renderer.render(particles);
+      } else {
+        if (glActive) {
+          // The GL context died mid-flight: repaint the base and continue
+          // on the 2D path for the rest of the component's life.
+          glActive = false;
+          glCanvas.style.display = 'none';
+          paintRest();
+          prevDirty = null;
+        }
+        draw2DMotion();
       }
     };
 
     setup();
-    draw();
+    paintRest();
 
     // ---- splash physics, gated to the choreographed scene ---------------
 
@@ -361,11 +478,14 @@ export default function PoppyAscii({
         p.vy += (SPRING * (p.hy - p.y) - DAMP * p.vy + fy) * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        // Under half a pixel of offset and a couple px/s the remaining
+        // drift is invisible; ending the loop here cuts seconds of tail
+        // repaints per burst.
         if (
-          Math.abs(p.x - p.hx) > 0.05 ||
-          Math.abs(p.y - p.hy) > 0.05 ||
-          Math.abs(p.vx) > 0.5 ||
-          Math.abs(p.vy) > 0.5
+          Math.abs(p.x - p.hx) > 0.4 ||
+          Math.abs(p.y - p.hy) > 0.4 ||
+          Math.abs(p.vx) > 2 ||
+          Math.abs(p.vy) > 2
         ) {
           awake = true;
         }
@@ -374,32 +494,44 @@ export default function PoppyAscii({
     };
 
     const loop = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 1 / 30);
+      // Clamp dt for spring stability, but no tighter than 15fps: a lower
+      // cap would play the physics in slow motion whenever frames drop.
+      const dt = Math.min((now - last) / 1000, 1 / 15);
       last = now;
       const t0 = perfOn ? performance.now() : 0;
       const awake = step(dt);
-      if (perfOn) perfStep += performance.now() - t0;
-      draw();
-      if (perfOn && ++perfFrames === 120) {
-        console.log(
-          `[poppy] ms/frame avg of 120 — step ${(perfStep / 120).toFixed(2)}, ` +
-            `clear ${(perfClear / 120).toFixed(2)}, ` +
-            `glyphs ${(perfGlyphs / 120).toFixed(2)}`,
-        );
-        perfStep = perfClear = perfGlyphs = 0;
-        perfFrames = 0;
+      const t1 = perfOn ? performance.now() : 0;
+      render();
+      if (perfOn) {
+        perfStep += t1 - t0;
+        perfRender += performance.now() - t1;
+        if (++perfFrames === 120) {
+          const mode = renderer && !renderer.lost ? 'gl' : '2d';
+          console.log(
+            `[poppy] ms/frame avg of 120 — step ${(perfStep / 120).toFixed(2)}, ` +
+              `render ${(perfRender / 120).toFixed(2)} via ${mode}`,
+          );
+          perfStep = perfRender = 0;
+          perfFrames = 0;
+        }
       }
       if (awake) {
         raf = requestAnimationFrame(loop);
       } else {
-        // Every bubble settled: snap exactly home and go idle.
+        // Every bubble settled: snap exactly home and hand back to the
+        // native-text poster.
         for (const p of particles) {
           p.x = p.hx;
           p.y = p.hy;
           p.vx = 0;
           p.vy = 0;
         }
-        draw();
+        if (glActive) {
+          glActive = false;
+          renderer?.clear();
+        }
+        prevDirty = null;
+        paintRest();
         raf = 0;
       }
     };
@@ -481,7 +613,8 @@ export default function PoppyAscii({
 
     const onResize = () => {
       setup();
-      draw();
+      prevDirty = null;
+      paintRest();
     };
 
     const mql = window.matchMedia(CHOREO_MEDIA);
@@ -514,6 +647,7 @@ export default function PoppyAscii({
       observer.disconnect();
       wakeRef.current = null;
       if (raf) cancelAnimationFrame(raf);
+      renderer?.dispose();
     };
     // Everything mutable lives in refs; mount once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -536,20 +670,10 @@ export default function PoppyAscii({
       {/* The anchor keeps its own positioning so callers can freely set
           the frame's position via className/style. */}
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <canvas
-          ref={canvasRef}
-          aria-hidden
-          style={{
-            // Replaced elements don't stretch from opposing insets, so the
-            // bleed is spelled out as explicit size + offset.
-            position: 'absolute',
-            left: `${(-BLEED / FRAME_ASPECT) * 100}%`,
-            top: `${-BLEED * 100}%`,
-            width: `${(1 + (2 * BLEED) / FRAME_ASPECT) * 100}%`,
-            height: `${(1 + 2 * BLEED) * 100}%`,
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Rest layer: the native-text poster. */}
+        <canvas ref={canvasRef} aria-hidden style={bleedCanvasStyle} />
+        {/* Motion layer: instanced glyph sprites while the flower flies. */}
+        <canvas ref={glCanvasRef} aria-hidden style={bleedCanvasStyle} />
       </div>
     </div>
   );
