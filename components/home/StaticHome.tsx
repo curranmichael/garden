@@ -1,123 +1,73 @@
-import { cn } from '@/lib/cn';
-import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
-import BookTile from './BookTile';
-import DiaryList from './DiaryList';
-import type { ShelfBooks, TileBlocks } from './HomeExperience';
+import { SECTION_ORDER, type SectionId } from '@/lib/home/sections';
+import Bio from './Bio';
+import NameLine from './NameLine';
 import PoppyAscii from './PoppyAscii';
-import Tile from './Tile';
-import Underline from './Underline';
+import SectionLabel from './SectionLabel';
 
 interface StaticHomeProps {
   active: SectionId | null;
-  blocks: TileBlocks;
-  books: ShelfBooks;
   onSelect: (id: SectionId) => void;
+  onClose: () => void;
 }
 
 /**
- * In-flow layout for phones and prefers-reduced-motion: same content and
- * states as the choreographed scene, native scrolling, no parallax.
+ * The mini scene for phones and prefers-reduced-motion: the desktop still
+ * re-planted in flow — name and bio up top, nav labels scattered down the
+ * left, the poppy right of center and cropped by the screen edge with its
+ * stems running past the fold. Placement lives in the --nav-*, --poppy-*
+ * and --scene-min-h variables (globals.css), which mirror the
+ * choreographed scene at desktop widths. Native scrolling reaches the
+ * stem tips; sections open in the SectionOverlay above this scene.
  */
 export default function StaticHome({
   active,
-  blocks,
-  books,
   onSelect,
+  onClose,
 }: StaticHomeProps) {
   return (
+    // overflow-clip on both axes: clip (unlike hidden) creates no scroll
+    // container, crops the poppy at the right screen edge, and cuts its
+    // bleed canvases off at the scene's bottom so the document ends at
+    // the stem tips. minHeight is explicit because every child is
+    // absolutely positioned.
     <main
-      className="min-h-dvh pb-16 pt-20"
-      style={{
-        paddingLeft: 'calc(var(--gutter) + var(--inset))',
-        paddingRight: 'calc(var(--gutter) + var(--inset))',
-      }}
+      inert={active !== null}
+      className="relative overflow-clip"
+      style={{ minHeight: 'var(--scene-min-h)' }}
     >
-      <p className="text-xl leading-[26px]">
-        Curran Dwyer, <em className="block">a software designer and founder</em>
-      </p>
-      <div className="mt-[13px] max-w-[746px] text-xl leading-[26px] text-muted">
-        <p>
-          Building{' '}
-          <a
-            href="https://enai.io"
-            target="_blank"
-            rel="noreferrer"
-            className="group relative inline-block"
-          >
-            Enai
-            <Underline src="/underlines/enai.svg" width={45} height={7} />
-          </a>
-          , a computer that organizes itself for you. I&rsquo;m interested in
-          media design as it relates to attention and phenomenology in
-          general. How might the computing medium be designed to promote
-          deeper attention?
-        </p>
-      </div>
-      <nav className="mt-20 flex flex-col items-center gap-y-5">
-        {[SECTION_ORDER.slice(0, 2), SECTION_ORDER.slice(2)].map((row) => (
-          <div key={row.join('-')} className="flex gap-x-[50px]">
-            {row.map((id) => {
-              const section = sections[id];
-              const current = active === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  aria-disabled={!section.activatable || undefined}
-                  className={cn(
-                    'relative block text-xl leading-[26px] transition-colors duration-200',
-                    'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-8 focus-visible:outline-muted/70',
-                    current ? 'text-ink' : 'text-muted',
-                    section.activatable ? 'group cursor-pointer' : 'cursor-default',
-                  )}
-                  onClick={() => onSelect(id)}
-                >
-                  {section.label}
-                  <Underline {...section.underline} active={current} />
-                </button>
-              );
-            })}
-          </div>
+      <NameLine active={active !== null} onHome={onClose} />
+      <Bio />
+      <PoppyAscii
+        interactive={active === null}
+        className="absolute z-[12]"
+        style={{
+          left: 'var(--poppy-left)',
+          top: 'var(--poppy-top)',
+          height: 'var(--poppy-h)',
+          transform: 'var(--poppy-shift)',
+        }}
+      />
+      {/* Unlike the choreographed layer (pointer-transparent at its root),
+          this wrapper must pass taps through itself — an inset-0 nav
+          would otherwise swallow every tap, including the poppy's. */}
+      <nav
+        aria-label="Sections"
+        className="pointer-events-none absolute inset-0 z-[13]"
+      >
+        {SECTION_ORDER.map((id) => (
+          <SectionLabel
+            key={id}
+            id={id}
+            current={active === id}
+            onSelect={onSelect}
+            className="pointer-events-auto absolute"
+            style={{
+              top: `var(--nav-top-${id})`,
+              left: `calc(var(--gutter) + var(--inset) + var(--nav-indent-${id}))`,
+            }}
+          />
         ))}
       </nav>
-      {active === 'inspiration' && (
-        <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
-          <div
-            className="grid gap-5"
-            style={{ gridTemplateColumns: 'repeat(var(--cols), minmax(0, 1fr))' }}
-          >
-            {blocks?.length
-              ? blocks.map((block) => <Tile key={block.id} block={block} />)
-              : sections.inspiration.tiles.map((tile) => (
-                  <Tile key={tile.id} block={null} />
-                ))}
-          </div>
-        </div>
-      )}
-      {active === 'diary' && (
-        <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
-          <DiaryList />
-        </div>
-      )}
-      {active === 'reading' && (
-        <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
-          <div
-            className="grid gap-5"
-            style={{ gridTemplateColumns: 'repeat(var(--cols), minmax(0, 1fr))' }}
-          >
-            {books?.length
-              ? books.map((book) => <BookTile key={book.id} book={book} />)
-              : sections.reading.tiles.map((tile) => (
-                  <BookTile key={tile.id} book={null} />
-                ))}
-          </div>
-        </div>
-      )}
-      {/* On the static layout the poppy is a still endpiece — no physics
-          (gated off with the choreography), fully in view, page-bottom. */}
-      <div className="mt-20 flex justify-center">
-        <PoppyAscii style={{ height: 'min(52dvh, 420px)' }} />
-      </div>
     </main>
   );
 }

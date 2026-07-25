@@ -28,7 +28,7 @@ export default function NameLine({ active, onHome }: NameLineProps) {
             active ? 'cursor-pointer' : 'cursor-default',
           )}
         >
-          Curran Dwyer, <em>a software designer and founder</em>
+          Curran Dwyer, <em className="max-md:block">a software designer and founder</em>
         </button>
       </p>
     </div>

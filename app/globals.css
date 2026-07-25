@@ -30,6 +30,55 @@
   --underline-blur: 0.5px;
 
   --cols: 2;
+
+  /* Static-scene placements. The :root values mirror the choreographed
+     scene (LandingNav's PLACEMENT table and HomeExperience's poppy style)
+     so the reduced-motion desktop layout reads as a still clone of it;
+     the phone block below re-plants everything for a narrow portrait
+     frame. Only StaticHome consumes these. */
+  --nav-top-diary: 44.2dvh;
+  --nav-indent-diary: 23px;
+  --nav-top-inspiration: 54.8dvh;
+  --nav-indent-inspiration: 89px;
+  --nav-top-reading: 65.6dvh;
+  --nav-indent-reading: 35px;
+  --nav-top-about: 79.8dvh;
+  --nav-indent-about: 138px;
+  --poppy-left: calc(50% + 281px);
+  --poppy-top: 48.9dvh;
+  --poppy-h: clamp(420px, 73.2dvh, 840px);
+  --poppy-shift: translate(-58.2%, -10.2%);
+  --scene-min-h: 100dvh;
+}
+
+@media (max-width: 767px) {
+  :root {
+    /* The mini scene: the desktop still re-planted for a phone. svh, not
+       dvh — placements must hold steady while mobile browser chrome
+       collapses (dvh would also retrigger the poppy's ResizeObserver and
+       snap glyphs home mid-burst). The max() guards keep the nav and
+       poppy clear of the bio on short screens: the svh terms set the
+       scattered look on tall phones, the px terms win below them and
+       slide the column down into native scroll. */
+    --name-y: calc(25svh - 58px);
+    /* The name wraps to two lines here; keep the 13px name-to-bio gap. */
+    --bio-top: calc(25svh + 7px);
+    --nav-top-diary: max(54svh, calc(var(--bio-top) + 230px));
+    --nav-indent-diary: 10px;
+    --nav-top-inspiration: max(63svh, calc(var(--bio-top) + 290px));
+    --nav-indent-inspiration: 40px;
+    --nav-top-reading: max(72svh, calc(var(--bio-top) + 350px));
+    --nav-indent-reading: 16px;
+    --nav-top-about: max(81svh, calc(var(--bio-top) + 410px));
+    --nav-indent-about: 62px;
+    /* Planted right of center and cropped by the screen edge, stems
+       running past the fold — the scene ends exactly at the stem tips. */
+    --poppy-left: calc(50% + 12px);
+    --poppy-top: max(50svh, calc(var(--bio-top) + 205px));
+    --poppy-h: clamp(460px, 66svh, 720px);
+    --poppy-shift: none;
+    --scene-min-h: max(100svh, calc(var(--poppy-top) + var(--poppy-h)));
+  }
 }
 
 @media (min-width: 640px) {
@@ -58,6 +107,19 @@
 
   body {
     @apply bg-page text-ink font-serif font-light antialiased;
+  }
+
+  /* Page scroll locks under the static layout's section overlay (the
+     overlay scrolls inside itself). html is the element iOS respects,
+     and overflow keeps the scroll offset for when the section closes.
+     Scoped to the static condition so the class is inert while the
+     choreographed scene (which never scrolls) is displayed. */
+  @media (prefers-reduced-motion: reduce), (max-width: 767px) {
+    html.overlay-open,
+    html.overlay-open body {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
   }
 }
 

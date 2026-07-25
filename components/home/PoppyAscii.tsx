@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type CSSProperties } from 'react';
-import { CHOREO_MEDIA } from '@/lib/home/media';
+import { CHOREO_MEDIA, STATIC_BURST_MEDIA } from '@/lib/home/media';
 import { CELL_ASPECT, CHARS, COLORS, PALETTE } from './poppyData';
 import {
   createPoppyGlRenderer,
@@ -635,13 +635,31 @@ export default function PoppyAscii({
     };
     sync();
     mql.addEventListener('change', sync);
+
+    /** The static layout's burst: a tap is the cork. click (never fired
+     *  by a scroll-drag) on the frame (exactly the flower's box — the
+     *  bleed canvases don't hit-test), at a confident fixed strength. */
+    const onTap = (event: MouseEvent) => {
+      if (!interactiveRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      spawnSplash(event.clientX - rect.left, event.clientY - rect.top, 0.9);
+    };
+    const tapMql = window.matchMedia(STATIC_BURST_MEDIA);
+    const syncTap = () => {
+      if (tapMql.matches) frame.addEventListener('click', onTap);
+      else frame.removeEventListener('click', onTap);
+    };
+    syncTap();
+    tapMql.addEventListener('change', syncTap);
     const observer = new ResizeObserver(onResize);
     observer.observe(canvas);
     window.addEventListener('resize', onResize);
 
     return () => {
       mql.removeEventListener('change', sync);
+      tapMql.removeEventListener('change', syncTap);
       window.removeEventListener('pointermove', onPointerMove);
+      frame.removeEventListener('click', onTap);
       document.documentElement.removeEventListener('mouseleave', onPointerOut);
       window.removeEventListener('resize', onResize);
       observer.disconnect();
@@ -664,6 +682,8 @@ export default function PoppyAscii({
         // is 73.2% of the viewport tall, clamped so glyphs stay legible.
         height: 'clamp(420px, 73.2dvh, 840px)',
         aspectRatio: `${GRID_COLS * CELL_ASPECT} / ${ROWS}`,
+        // Rapid taps must burst, not double-tap-zoom, on touch screens.
+        touchAction: 'manipulation',
         ...style,
       }}
     >

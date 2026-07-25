@@ -9,6 +9,7 @@ import ContentField from './ContentField';
 import LandingNav from './LandingNav';
 import NameLine from './NameLine';
 import PoppyAscii from './PoppyAscii';
+import SectionOverlay from './SectionOverlay';
 import StaticHome from './StaticHome';
 
 export type TileBlocks = InspirationBlock[] | null;
@@ -102,11 +103,12 @@ export default function HomeExperience() {
         </div>
       </div>
       <div className="layout-static">
-        <StaticHome
+        <StaticHome active={active} onSelect={select} onClose={deactivate} />
+        <SectionOverlay
           active={active}
           blocks={blocks}
           books={books}
-          onSelect={select}
+          onClose={deactivate}
         />
       </div>
     </>
