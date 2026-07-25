@@ -1,7 +1,8 @@
 import { cn } from '@/lib/cn';
 import { SECTION_ORDER, sections, type SectionId } from '@/lib/home/sections';
+import BookTile from './BookTile';
 import DiaryList from './DiaryList';
-import type { TileBlocks } from './HomeExperience';
+import type { ShelfBooks, TileBlocks } from './HomeExperience';
 import PoppyAscii from './PoppyAscii';
 import Tile from './Tile';
 import Underline from './Underline';
@@ -9,6 +10,7 @@ import Underline from './Underline';
 interface StaticHomeProps {
   active: SectionId | null;
   blocks: TileBlocks;
+  books: ShelfBooks;
   onSelect: (id: SectionId) => void;
 }
 
@@ -19,6 +21,7 @@ interface StaticHomeProps {
 export default function StaticHome({
   active,
   blocks,
+  books,
   onSelect,
 }: StaticHomeProps) {
   return (
@@ -94,6 +97,20 @@ export default function StaticHome({
       {active === 'diary' && (
         <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
           <DiaryList />
+        </div>
+      )}
+      {active === 'reading' && (
+        <div className="-mx-5 mt-6 rounded-[4px] bg-panel p-5">
+          <div
+            className="grid gap-5"
+            style={{ gridTemplateColumns: 'repeat(var(--cols), minmax(0, 1fr))' }}
+          >
+            {books?.length
+              ? books.map((book) => <BookTile key={book.id} book={book} />)
+              : sections.reading.tiles.map((tile) => (
+                  <BookTile key={tile.id} book={null} />
+                ))}
+          </div>
         </div>
       )}
       {/* On the static layout the poppy is a still endpiece — no physics

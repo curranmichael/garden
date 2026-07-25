@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { sections, type SectionId } from '@/lib/home/sections';
+import BookTile from './BookTile';
 import DiaryList from './DiaryList';
-import type { TileBlocks } from './HomeExperience';
+import type { ShelfBooks, TileBlocks } from './HomeExperience';
 import ProgressiveBlur from './ProgressiveBlur';
 import Tile from './Tile';
 
@@ -29,10 +30,12 @@ const LEAD = 120;
 export default function ContentField({
   active,
   blocks,
+  books,
   onClose,
 }: {
   active: SectionId | null;
   blocks: TileBlocks;
+  books: ShelfBooks;
   onClose: () => void;
 }) {
   // Holds the last open section while fading out, so the content doesn't
@@ -83,6 +86,16 @@ export default function ContentField({
           // the same optical line the tiles do.
           <div className="-mt-4">
             <DiaryList ghost />
+          </div>
+        ) : shown === 'reading' ? (
+          // Four columns: book covers run 2:3, so the narrower tile keeps
+          // row heights close to the inspiration grid's squares.
+          <div className="grid grid-cols-4 gap-10">
+            {books?.length
+              ? books.map((book) => <BookTile key={book.id} book={book} />)
+              : sections.reading.tiles.map((tile) => (
+                  <BookTile key={tile.id} book={null} />
+                ))}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-10">

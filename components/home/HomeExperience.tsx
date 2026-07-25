@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { InspirationBlock } from '@/lib/arena';
+import type { Book } from '@/lib/goodreads';
 import { sections, type SectionId } from '@/lib/home/sections';
 import Bio from './Bio';
 import ContentField from './ContentField';
@@ -11,6 +12,7 @@ import PoppyAscii from './PoppyAscii';
 import StaticHome from './StaticHome';
 
 export type TileBlocks = InspirationBlock[] | null;
+export type ShelfBooks = Book[] | null;
 
 /**
  * The Garden-2 landing: one still scene. Name, bio, and a scattered
@@ -21,8 +23,10 @@ export type TileBlocks = InspirationBlock[] | null;
 export default function HomeExperience() {
   const [active, setActive] = useState<SectionId | null>(null);
   // Fetched after mount: the server draws a fresh random set per request,
-  // and the placeholder grid renders until it arrives — no hydration risk.
+  // and the placeholder grids render until the data arrives — no hydration
+  // risk.
   const [blocks, setBlocks] = useState<TileBlocks>(null);
+  const [books, setBooks] = useState<ShelfBooks>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,6 +34,12 @@ export default function HomeExperience() {
       .then((res) => (res.ok ? res.json() : null))
       .then((draw: InspirationBlock[] | null) => {
         if (draw?.length) setBlocks(draw);
+      })
+      .catch(() => {});
+    fetch('/api/reading', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((shelf: Book[] | null) => {
+        if (shelf?.length) setBooks(shelf);
       })
       .catch(() => {});
     return () => controller.abort();
@@ -81,13 +91,23 @@ export default function HomeExperience() {
               transform: 'translate(-58.2%, -10.2%)',
             }}
           />
-          <ContentField active={active} blocks={blocks} onClose={deactivate} />
+          <ContentField
+            active={active}
+            blocks={blocks}
+            books={books}
+            onClose={deactivate}
+          />
           <LandingNav active={active} onSelect={select} />
           <NameLine active={active !== null} onHome={deactivate} />
         </div>
       </div>
       <div className="layout-static">
-        <StaticHome active={active} blocks={blocks} onSelect={select} />
+        <StaticHome
+          active={active}
+          blocks={blocks}
+          books={books}
+          onSelect={select}
+        />
       </div>
     </>
   );

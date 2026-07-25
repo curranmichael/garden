@@ -46,8 +46,8 @@ export const sections: Record<SectionId, Section> = {
   reading: {
     id: 'reading',
     label: 'Reading',
-    activatable: false,
-    tiles: [],
+    activatable: true,
+    tiles: placeholderTiles('reading', 12),
     underline: { src: '/underlines/nav-reading.svg', width: 80, height: 8 },
   },
   about: {
