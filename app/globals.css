@@ -1,21 +1,33 @@
 @import "tailwindcss";
 
-/* Two schemes on the Radix (v1) sand scale, following the system setting.
-   Dark is the original Garden Figma — dark page, light panel — built from
-   sandDark 1/11/12. Light maps each token to the same step of the light
-   sand scale, so the inverted panel and the contrast relationships carry
-   over unchanged. */
+/* Two schemes on the Radix (v1) sand scale. Dark is the original Garden
+   Figma — dark page, light panel — built from sandDark 1/11/12. Light maps
+   each token to the same step of the light sand scale, so the inverted
+   panel and the contrast relationships carry over unchanged.
+
+   With scripts on, paintSky (lib/sky.ts) overrides page/ink/muted/tile
+   inline on <html> to follow the sun over San Francisco — these two are
+   its night and day ends. The system setting below is only the no-JS
+   fallback. */
 :root {
   --page: #161615; /* sand1 */
   --ink: #ededec; /* sand12 */
   --muted: #a1a09a; /* sand11 */
-  --panel: #ededec;
-  --panel-ink: #161615;
   --tile: #d9d9d9; /* Figma tile gray, not on the sand scale */
+  /* The panel is the page inverted, whatever the sky. */
+  --panel: var(--ink);
+  --panel-ink: var(--page);
   /* Sampled poppy orange; inks active + hovered underlines. Shared by
      both schemes. */
   --accent: #e1671f;
   color-scheme: dark;
+  /* The sun crossing the horizon flips light/dark; crossfade it rather
+     than snap. Minute-to-minute drift is too small to see either way. */
+  transition:
+    --page 3s ease,
+    --ink 3s ease,
+    --muted 3s ease,
+    --tile 3s ease;
 }
 
 @media (prefers-color-scheme: light) {
@@ -23,11 +35,32 @@
     --page: #fdfdfc; /* sand1 */
     --ink: #1b1b18; /* sand12 */
     --muted: #706f6c; /* sand11 */
-    --panel: #1b1b18;
-    --panel-ink: #fdfdfc;
     --tile: #2e2e2b; /* the tile gray mirrored; lands on sandDark 5 */
     color-scheme: light;
   }
+}
+
+/* Registered so the sky tokens can transition (unregistered custom
+   properties swap discretely). */
+@property --page {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #161615;
+}
+@property --ink {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ededec;
+}
+@property --muted {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a1a09a;
+}
+@property --tile {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #d9d9d9;
 }
 
 @theme inline {
